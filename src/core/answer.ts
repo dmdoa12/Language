@@ -3,7 +3,8 @@ import type { StudyCard, StudyRating } from './types';
 
 export type AnswerTarget = Pick<StudyCard, 'ja' | 'readings'>;
 
-export type AnswerResult = 'correct' | 'near' | 'wrong';
+// equivalent: LLM 이 뜻은 같다고 판정한 다른 표현 (core/judge.ts)
+export type AnswerResult = 'correct' | 'near' | 'equivalent' | 'wrong';
 
 export interface AnswerGrade {
   result: AnswerResult;

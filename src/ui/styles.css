@@ -263,7 +263,8 @@ button.link {
   color: var(--good);
 }
 
-.verdict-near {
+.verdict-near,
+.verdict-equivalent {
   color: var(--hard);
 }
 

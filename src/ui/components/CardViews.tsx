@@ -10,6 +10,7 @@ import { JaInput } from './JaInput';
 const RESULT_LABEL = {
   correct: '정답',
   near: '아까워요 (근접 오답)',
+  equivalent: '뜻은 통해요 (다른 표현)',
   wrong: '오답',
 } as const;
 
