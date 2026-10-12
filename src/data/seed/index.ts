@@ -1,5 +1,6 @@
 import { createFsrsCard } from '../../core/fsrs';
 import type { StudyCard, Theme } from '../../core/types';
+import cafe from './cafe.json';
 import konbini from './konbini.json';
 
 export interface SeedCard {
@@ -13,6 +14,7 @@ export interface SeedCard {
 
 export const SEED_DECKS: Partial<Record<Theme, readonly SeedCard[]>> = {
   konbini,
+  cafe,
 };
 
 export function buildDeckCards(now: Date): StudyCard[] {
