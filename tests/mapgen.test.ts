@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createFsrsCard } from '../src/core/fsrs';
 import {
   enumeratePaths,
+  bossCardCount,
   floorCount,
   generateMap,
   isLeech,
@@ -42,6 +43,16 @@ describe('floorCount', () => {
     expect(floorCount(15)).toBe(5);
     expect(floorCount(70)).toBe(12);
     expect(floorCount(500)).toBe(15);
+  });
+});
+
+describe('bossCardCount', () => {
+  it('due 의 절반 이하, 최대 8, due 가 있으면 최소 1', () => {
+    expect(bossCardCount(0)).toBe(0);
+    expect(bossCardCount(1)).toBe(1);
+    expect(bossCardCount(3)).toBe(1);
+    expect(bossCardCount(10)).toBe(5);
+    expect(bossCardCount(40)).toBe(8);
   });
 });
 
@@ -123,6 +134,12 @@ describe('generateMap', () => {
         for (const nd of list) expect(nd.cardIds).toEqual(list[0]!.cardIds);
       }
     }
+  });
+
+  it('단일 테마 due 3장이어도 일반 층이 생긴다', () => {
+    const { nodes } = generateMap({ due: dueCards(3), leeches: [], seed: 'x' });
+    expect(nodes.find((n) => n.type === 'boss')!.cardIds).toHaveLength(1);
+    expect(nodes.some((n) => n.type === 'battle')).toBe(true);
   });
 
   it('due 가 적으면 카드 없는 층은 만들지 않는다', () => {

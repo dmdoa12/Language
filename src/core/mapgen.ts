@@ -28,6 +28,11 @@ export function floorCount(dueCount: number): number {
   return Math.min(MAX_FLOORS, Math.max(MIN_FLOORS, Math.ceil(dueCount / CARDS_PER_FLOOR_TARGET) + 2));
 }
 
+export function bossCardCount(dueCount: number): number {
+  if (dueCount === 0) return 0;
+  return Math.max(1, Math.min(BOSS_MAX_CARDS, Math.floor(dueCount / 2)));
+}
+
 // due 가 가장 많은 테마. 동률이면 먼저 나온(더 잊기 쉬운) 카드의 테마.
 export function pickMainTheme(due: readonly StudyCard[]): Theme | null {
   const counts = new Map<Theme, number>();
@@ -106,12 +111,13 @@ function connect(rng: Rng, from: MapNode[], to: MapNode[]): void {
 export function generateMap({ due, leeches, seed }: MapGenInput): GeneratedMap {
   const rng = createRng(seed);
 
-  // 보스: 메인 테마 due 카드 (최대 8장, 정렬상 뒤쪽 = 상대적으로 기억이 잘 된 것).
+  // 보스: 메인 테마 due 카드 (정렬상 뒤쪽 = 상대적으로 기억이 잘 된 것).
+  // 일반 층이 비지 않도록 전체 due 의 절반 이하, 최대 8장. due 가 있으면 최소 1장.
   const mainTheme = pickMainTheme(due);
   const bossIds = new Set(
     due
       .filter((c) => c.theme === mainTheme)
-      .slice(-BOSS_MAX_CARDS)
+      .slice(-bossCardCount(due.length))
       .map((c) => c.id),
   );
   const rest = due.filter((c) => !bossIds.has(c.id));
