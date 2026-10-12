@@ -7,7 +7,88 @@ import { isSpeechSupported } from '../speech';
 import { seoulDateKey } from '../../core/date';
 import { ensureSeeded, exportAll, importAll } from '../../db/repository';
 import { useCardsStore } from '../../store/cards';
+import { useSyncStore } from '../../store/sync';
 import { useDayStore } from '../../store/day';
+
+function timeAgo(ms: number): string {
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const h = Math.round(min / 60);
+  return h < 24 ? `${h}시간 전` : `${Math.round(h / 24)}일 전`;
+}
+
+function SyncPanel() {
+  const { config, syncing, error, connect, disconnect, syncNow } = useSyncStore();
+  const [token, setToken] = useState('');
+  const [confirming, setConfirming] = useState(false);
+
+  if (config) {
+    return (
+      <section className="panel form">
+        <h3>기기 간 동기화</h3>
+        <p className="muted small">
+          GitHub 비공개 Gist 에 기록을 올리고 받아요. 앱을 열 때, 하루를 마칠 때, 처음 화면으로 돌아올 때 자동으로 맞춰요.
+        </p>
+        <p className="note">
+          {syncing ? '동기화 중…' : config.lastSyncedAt ? `마지막 동기화: ${timeAgo(config.lastSyncedAt)}` : '아직 동기화 전이에요.'}
+        </p>
+        {error ? <p className="input-error">{error}</p> : null}
+        <div className="row">
+          <button type="button" className="primary" disabled={syncing} onClick={() => void syncNow({ force: true })}>
+            지금 동기화
+          </button>
+          {confirming ? (
+            <button type="button" className="secondary" onClick={disconnect}>
+              정말 해제
+            </button>
+          ) : (
+            <button type="button" className="secondary" onClick={() => setConfirming(true)}>
+              연결 해제
+            </button>
+          )}
+        </div>
+        <p className="muted small">연결을 해제해도 이 기기의 기록과 Gist 의 기록은 그대로 남아요.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="panel form">
+      <h3>기기 간 동기화</h3>
+      <p className="muted small">
+        휴대폰과 PC 에서 같은 기록을 쓰려면 GitHub 토큰을 넣어 주세요. 비공개 Gist 하나에 기록을 보관하고, 기기마다 같은 토큰을
+        넣으면 서로 합쳐져요. 무료예요.
+      </p>
+      <ol className="steps small">
+        <li>GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token</li>
+        <li>
+          Scopes 에서 <strong>gist</strong> 만 체크하고 만료 기간을 정해 만들기
+        </li>
+        <li>만들어진 토큰(ghp_...)을 아래에 붙여넣기</li>
+      </ol>
+      <label htmlFor="sync-token">GitHub 토큰 (gist 권한)</label>
+      <input
+        id="sync-token"
+        type="password"
+        autoComplete="off"
+        placeholder="ghp_..."
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+      />
+      <p className="muted small">토큰은 이 기기에만 저장돼요. gist 권한만 있어 저장소 코드에는 접근할 수 없어요.</p>
+      {error ? <p className="input-error">{error}</p> : null}
+      <button
+        type="button"
+        className="primary"
+        disabled={syncing || token.trim() === ''}
+        onClick={() => void connect(token).then(() => setToken('')).catch(() => {})}
+      >
+        {syncing ? '연결하는 중…' : '연결하고 동기화'}
+      </button>
+    </section>
+  );
+}
 
 function ChallengePanel() {
   const profile = useCardsStore((s) => s.profile);
@@ -296,6 +377,8 @@ export function Settings() {
           저장
         </button>
       </section>
+
+      <SyncPanel />
 
       <ChallengePanel />
 

@@ -134,7 +134,7 @@ export async function convertMinedPhrase(phrase: MinedPhrase, card: StudyCard): 
   return linked;
 }
 
-export async function exportAll(now: number): Promise<string> {
+export async function exportSnapshot(now: number): Promise<Omit<BackupData, 'version'>> {
   const [cards, reviewLogs, days, minedPhrases, profile] = await Promise.all([
     db.cards.toArray(),
     db.reviewLogs.toArray(),
@@ -142,7 +142,11 @@ export async function exportAll(now: number): Promise<string> {
     db.minedPhrases.toArray(),
     loadProfile(),
   ]);
-  return serializeBackup({ exportedAt: now, cards, reviewLogs, days, minedPhrases, profile });
+  return { exportedAt: now, cards, reviewLogs, days, minedPhrases, profile };
+}
+
+export async function exportAll(now: number): Promise<string> {
+  return serializeBackup(await exportSnapshot(now));
 }
 
 // 전부 지우고 백업으로 교체한다. 이후 덱에 새로 생긴 시드 카드는 ensureSeeded 가 채운다.

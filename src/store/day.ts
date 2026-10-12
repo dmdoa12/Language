@@ -19,6 +19,7 @@ import { characterLevel } from '../core/meta';
 import type { DayLog } from '../core/types';
 import { introduce, saveDay, saveDayAndReview } from '../db/repository';
 import { getCard, useCardsStore } from './cards';
+import { useSyncStore } from './sync';
 
 export type Screen =
   | 'home'
@@ -159,7 +160,10 @@ export const useDayStore = create<DayState>((set, get) => {
 
     goHome: () => {
       set({ screen: 'home', line: null, chat: null });
-      void useCardsStore.getState().refreshMeta();
+      void useCardsStore
+        .getState()
+        .refreshMeta()
+        .then(() => useSyncStore.getState().syncNow());
     },
 
     open: (screen) => {
@@ -296,7 +300,11 @@ export const useDayStore = create<DayState>((set, get) => {
       if (!day) return;
       if (day.status === 'done') {
         set({ screen: 'summary', line: null });
-        void useCardsStore.getState().refreshMeta();
+        // 하루를 마치면 바로 올린다
+        void useCardsStore
+          .getState()
+          .refreshMeta()
+          .then(() => useSyncStore.getState().syncNow({ force: true }));
         return;
       }
       prepareLine(day, true);

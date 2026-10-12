@@ -99,6 +99,13 @@ describe('mergeSnapshots', () => {
     expect(merged.cards.find((c) => c.id === 'm')!.source).toBe('mined');
   });
 
+  it('안 배운 카드는 원격 값에 맞춰, 같은 내용이면 합친 결과가 원격과 같다', () => {
+    const localFresh = { ...card('a'), fsrs: createFsrsCard(new Date(T0 + D)) };
+    const remoteFresh = card('a');
+    const merged = mergeSnapshots(snap([localFresh], []), snap([remoteFresh], []));
+    expect(merged.cards).toEqual([remoteFresh]);
+  });
+
   it('배운 시각은 더 이른 쪽', () => {
     const early = introduceCard(card('a'), new Date(T0));
     const late = introduceCard(card('a'), new Date(T0 + D));

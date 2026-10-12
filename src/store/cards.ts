@@ -22,6 +22,7 @@ interface CardsState {
   days: DayLog[];
   minedPhrases: MinedPhrase[];
   notices: MetaNotice[]; // 새로 해금된 테마·유물
+  changedAt: number; //     이 기기에서 기록이 마지막으로 바뀐 시각 (동기화할 게 있는지 판단)
   init: () => Promise<void>;
   reload: () => Promise<void>;
   refreshMeta: () => Promise<void>;
@@ -41,6 +42,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   days: [],
   minedPhrases: [],
   notices: [],
+  changedAt: 0,
 
   init: async () => {
     try {
@@ -79,20 +81,23 @@ export const useCardsStore = create<CardsState>((set, get) => ({
 
   dismissNotices: () => set({ notices: [] }),
 
-  replaceCard: (card) => set({ cards: get().cards.map((c) => (c.id === card.id ? card : c)) }),
+  replaceCard: (card) => set({ cards: get().cards.map((c) => (c.id === card.id ? card : c)), changedAt: Date.now() }),
 
-  addCard: (card) => set({ cards: [...get().cards, card] }),
+  addCard: (card) => set({ cards: [...get().cards, card], changedAt: Date.now() }),
 
   upsertDay: (day) => {
     const days = get().days;
-    set({ days: days.some((d) => d.id === day.id) ? days.map((d) => (d.id === day.id ? day : d)) : [...days, day] });
+    set({
+      days: days.some((d) => d.id === day.id) ? days.map((d) => (d.id === day.id ? day : d)) : [...days, day],
+      changedAt: Date.now(),
+    });
   },
 
-  setMinedPhrases: (minedPhrases) => set({ minedPhrases }),
+  setMinedPhrases: (minedPhrases) => set({ minedPhrases, changedAt: Date.now() }),
 
   // 화면이 바로 바뀌도록 상태를 먼저 바꾸고 저장한다
   setProfile: async (profile) => {
-    set({ profile });
+    set({ profile, changedAt: Date.now() });
     await saveProfile(profile);
   },
 }));

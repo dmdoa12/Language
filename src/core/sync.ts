@@ -18,8 +18,14 @@ function mergeCards(local: readonly StudyCard[], remote: readonly StudyCard[], l
   for (const c of remote) byId.set(c.id, c);
   for (const c of local) {
     const other = byId.get(c.id);
-    // 내용(문장 등)은 로컬 우선, 배운 시각은 더 이른 쪽
-    byId.set(c.id, other ? { ...c, introducedAt: minIntroducedAt(c.introducedAt, other.introducedAt) } : c);
+    if (!other) {
+      byId.set(c.id, c);
+      continue;
+    }
+    // 내용(문장 등)은 로컬 우선, 배운 시각은 더 이른 쪽.
+    // 아직 안 배운 카드의 초기 FSRS 값은 기기마다 설치 시각으로 달라 원격 값에 맞춘다 (불필요한 재업로드 방지).
+    const introducedAt = minIntroducedAt(c.introducedAt, other.introducedAt);
+    byId.set(c.id, { ...c, introducedAt, fsrs: introducedAt === null ? other.fsrs : c.fsrs });
   }
   const logsByCard = new Map<string, ReviewLogEntry[]>();
   for (const l of logs) logsByCard.set(l.cardId, [...(logsByCard.get(l.cardId) ?? []), l]);
