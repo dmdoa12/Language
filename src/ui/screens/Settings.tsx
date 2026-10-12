@@ -1,9 +1,82 @@
 import { useRef, useState } from 'react';
+import { checkConnection, loadLlmConfig, saveLlmConfig } from '../../api/llm';
 import { parseBackup, type BackupData } from '../../core/backup';
 import { seoulDateKey } from '../../core/date';
 import { ensureSeeded, exportAll, importAll } from '../../db/repository';
 import { useCardsStore } from '../../store/cards';
 import { useGameStore } from '../../store/game';
+
+function AiSettings() {
+  const initial = loadLlmConfig();
+  const [endpoint, setEndpoint] = useState(initial?.endpoint ?? '');
+  const [accessKey, setAccessKey] = useState(initial?.accessKey ?? '');
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(
+    initial ? { ok: true, text: '연결 정보가 저장돼 있어요.' } : null,
+  );
+  const [checking, setChecking] = useState(false);
+
+  const save = async () => {
+    const config = { endpoint: endpoint.trim(), accessKey: accessKey.trim() };
+    if (!/^https?:\/\//.test(config.endpoint) || config.accessKey === '') {
+      setStatus({ ok: false, text: 'https:// 로 시작하는 Worker 주소와 접속 암호를 모두 입력해 주세요.' });
+      return;
+    }
+    setChecking(true);
+    try {
+      await checkConnection(config);
+      saveLlmConfig(config);
+      setStatus({ ok: true, text: '연결됐어요. 이제 AI 채점·첨삭과 보스 대화를 쓸 수 있어요.' });
+    } catch (e) {
+      setStatus({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const disconnect = () => {
+    saveLlmConfig(null);
+    setAccessKey('');
+    setStatus({ ok: false, text: '연결을 해제했어요. 채점은 기존 방식으로만 해요.' });
+  };
+
+  return (
+    <section className="panel form">
+      <h3>AI 채점·대화</h3>
+      <p className="muted small">
+        Cloudflare Worker 주소와 접속 암호를 넣으면 표준 문장과 다르게 말해도 뜻이 맞는지 AI 가 판정하고 첨삭해 줘요. 이 기기에만
+        저장돼요.
+      </p>
+      <label htmlFor="llm-endpoint">Worker 주소</label>
+      <input
+        id="llm-endpoint"
+        type="url"
+        inputMode="url"
+        placeholder="https://jp-talk-worker.<계정>.workers.dev"
+        value={endpoint}
+        onChange={(e) => setEndpoint(e.target.value)}
+      />
+      <label htmlFor="llm-key">접속 암호</label>
+      <input
+        id="llm-key"
+        type="password"
+        autoComplete="off"
+        value={accessKey}
+        onChange={(e) => setAccessKey(e.target.value)}
+      />
+      {status ? <p className={status.ok ? 'note' : 'input-error'}>{status.text}</p> : null}
+      <div className="row">
+        <button type="button" className="primary" disabled={checking} onClick={() => void save()}>
+          {checking ? '확인 중…' : '연결 확인 후 저장'}
+        </button>
+        {initial ? (
+          <button type="button" className="secondary" onClick={disconnect}>
+            연결 해제
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
 
 export function Settings() {
   const profile = useCardsStore((s) => s.profile);
@@ -87,6 +160,8 @@ export function Settings() {
           저장
         </button>
       </section>
+
+      <AiSettings />
 
       <section className="panel form">
         <h3>백업</h3>

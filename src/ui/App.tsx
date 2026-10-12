@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useCardsStore } from '../store/cards';
 import { useGameStore } from '../store/game';
 import { Battle } from './screens/Battle';
+import { BossChat } from './screens/BossChat';
 import { Collection } from './screens/Collection';
 import { Home } from './screens/Home';
 import { MapScreen } from './screens/MapScreen';
@@ -18,6 +19,7 @@ function CurrentScreen() {
   const run = useGameStore((s) => s.run);
   const battle = useGameStore((s) => s.battle);
   const reward = useGameStore((s) => s.reward);
+  const chat = useGameStore((s) => s.chat);
 
   switch (screen) {
     case 'review':
@@ -32,6 +34,8 @@ function CurrentScreen() {
       return run && reward ? <Reward /> : <Home />;
     case 'result':
       return run ? <RunResult /> : <Home />;
+    case 'chat':
+      return run && chat ? <BossChat /> : <Home />;
     case 'mining':
       return <Mining />;
     case 'collection':

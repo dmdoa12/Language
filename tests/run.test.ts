@@ -246,6 +246,9 @@ describe('보스 대화', () => {
     expect(chatBonusGold(sampleRun(), 3)).toBe(0);
     expect(chatBonusGold(sampleRun({ status: 'won' }), 3)).toBe(15);
     expect(chatBonusGold(sampleRun({ status: 'won', practice: true }), 3)).toBe(7);
-    expect(applyChatBonus(sampleRun({ status: 'won', gold: 10 }), 2).gold).toBe(20);
+    const claimed = applyChatBonus(sampleRun({ status: 'won', gold: 10 }), 2);
+    expect(claimed.gold).toBe(20);
+    expect(claimed.chatBonusClaimed).toBe(true);
+    expect(applyChatBonus(claimed, 2).gold).toBe(20); // 두 번 받지 않음
   });
 });

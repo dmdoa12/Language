@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { isLlmEnabled, judgeAnswer } from '../api/llm';
+import { chatTurn, isLlmEnabled, judgeAnswer, type ChatLine } from '../api/llm';
 import { gradeAnswer, isExactAnswer, type AnswerGrade } from '../core/answer';
 import { combineGrade, needsJudge, type JudgeVerdict } from '../core/judge';
 import { isDue, selectNewCards } from '../core/fsrs';
@@ -8,9 +8,11 @@ import { characterLevel } from '../core/meta';
 import {
   abandonRun,
   answerCard,
+  applyChatBonus,
   applyReward,
   buyHeal,
   buyRelic,
+  chatPhraseIds,
   clearNode,
   createRun,
   currentNode,
@@ -40,7 +42,8 @@ export type Screen =
   | 'result'
   | 'mining'
   | 'collection'
-  | 'settings';
+  | 'settings'
+  | 'chat';
 
 export interface BattleState {
   mode: 'node' | 'learn'; // learn: 상점에서 산 신규 카드 학습 (HP 영향 없음)
@@ -57,6 +60,20 @@ export interface BattleState {
   recorded: boolean; // FSRS 에 기록했는가 (연습 출제면 false)
 }
 
+export interface ChatEntry extends ChatLine {
+  ko?: string; //         직원 대사 번역
+  correction?: string; // 학습자 발화 첨삭
+}
+
+export interface ChatState {
+  phraseIds: string[];
+  lines: ChatEntry[];
+  usedIds: string[];
+  loading: boolean;
+  error: string | null;
+  done: boolean;
+}
+
 export interface RewardState {
   nodeId: string;
   options: RewardOption[];
@@ -71,6 +88,7 @@ interface GameState {
   nodePerfect: boolean;
   busy: boolean;
   startLevel: number | null; // 결과 화면의 레벨 변화 표시용
+  chat: ChatState | null;
 
   goHome: () => void;
   openReview: () => void;
@@ -90,6 +108,9 @@ interface GameState {
   buyShopRelic: (relicId: string) => Promise<void>;
   buyShopHeal: () => Promise<void>;
   leaveShop: () => Promise<void>;
+  startChat: () => Promise<void>;
+  sendChat: (text: string) => Promise<void>;
+  finishChat: () => Promise<void>;
 }
 
 function newBattle(mode: BattleState['mode'], cardId: string, phase: BattleState['phase']): BattleState {
@@ -151,6 +172,36 @@ export const useGameStore = create<GameState>((set, get) => {
     set({ battle: null, reward: { nodeId: node.id, options, notes }, screen: 'reward' });
   };
 
+  const turn = async (chat: ChatState) => {
+    const run = get().run!;
+    set({ chat: { ...chat, loading: true, error: null } });
+    try {
+      const phrases = chat.phraseIds.map((id) => getCard(id));
+      const result = await chatTurn(
+        run.mainTheme!,
+        phrases,
+        chat.lines.map(({ role, text }) => ({ role, text })),
+      );
+      const lines = [...chat.lines];
+      const last = lines.at(-1);
+      if (last?.role === 'learner' && result.correction) lines[lines.length - 1] = { ...last, correction: result.correction };
+      lines.push({ role: 'staff', text: result.reply, ko: result.replyKo });
+      set({
+        chat: {
+          ...chat,
+          lines,
+          usedIds: [...new Set([...chat.usedIds, ...result.usedPhraseIds])],
+          loading: false,
+          done: result.done,
+        },
+      });
+    } catch (e) {
+      // 실패한 학습자 발화는 되돌려 다시 보낼 수 있게 한다
+      const lines = chat.lines.at(-1)?.role === 'learner' ? chat.lines.slice(0, -1) : chat.lines;
+      set({ chat: { ...chat, lines, loading: false, error: e instanceof Error ? e.message : String(e) } });
+    }
+  };
+
   return {
     screen: 'home',
     run: null,
@@ -159,6 +210,7 @@ export const useGameStore = create<GameState>((set, get) => {
     nodePerfect: true,
     busy: false,
     startLevel: null,
+    chat: null,
 
     goHome: () => {
       set({ screen: 'home', battle: null, reward: null });
@@ -335,6 +387,28 @@ export const useGameStore = create<GameState>((set, get) => {
     leaveShop: async () => {
       await persistRun(leaveShop(get().run!, Date.now()));
       set({ screen: 'map' });
+    },
+
+    // 보스 대화: FSRS·체력과 무관한 보너스. 쓴 오늘의 표현 수만큼 골드.
+    startChat: async () => {
+      const run = get().run;
+      if (!run || !run.mainTheme || !isLlmEnabled() || run.chatBonusClaimed) return;
+      const phraseIds = chatPhraseIds(run, (id) => useCardsStore.getState().cards.find((c) => c.id === id)?.theme);
+      const chat: ChatState = { phraseIds, lines: [], usedIds: [], loading: true, error: null, done: false };
+      set({ chat, screen: 'chat' });
+      await turn(chat);
+    },
+
+    sendChat: async (text) => {
+      const chat = get().chat;
+      if (!chat || chat.loading || chat.done) return;
+      await turn({ ...chat, lines: [...chat.lines, { role: 'learner', text }] });
+    },
+
+    finishChat: async () => {
+      const { run, chat } = get();
+      if (run && chat && !run.chatBonusClaimed) await persistRun(applyChatBonus(run, chat.usedIds.length));
+      set({ chat: null, screen: 'result' });
     },
   };
 });

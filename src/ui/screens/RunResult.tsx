@@ -1,3 +1,4 @@
+import { isLlmEnabled } from '../../api/llm';
 import { seoulDateKey } from '../../core/date';
 import { characterLevel } from '../../core/meta';
 import { countDueBy } from '../../core/session';
@@ -15,6 +16,8 @@ export function RunResult() {
   const run = useGameStore((s) => s.run)!;
   const goHome = useGameStore((s) => s.goHome);
   const startLevel = useGameStore((s) => s.startLevel);
+  const startChat = useGameStore((s) => s.startChat);
+  const canChat = run.status === 'won' && run.mainTheme !== null && !run.chatBonusClaimed && isLlmEnabled();
   const cards = useCardsStore((s) => s.cards);
   const tomorrow = seoulDateKey(Date.now() + 24 * 60 * 60 * 1000);
   const answered = run.stats.good + run.stats.hard + run.stats.again;
@@ -50,7 +53,12 @@ export function RunResult() {
         정답 {run.stats.good} · 애매 {run.stats.hard} · 오답 {run.stats.again}
         {run.practice ? ' · 연습 모드' : ''}
       </p>
-      <button type="button" className="primary" onClick={goHome}>
+      {canChat ? (
+        <button type="button" className="primary" onClick={() => void startChat()}>
+          보너스 대화: 점원과 몇 마디 나누기
+        </button>
+      ) : null}
+      <button type="button" className={canChat ? 'secondary' : 'primary'} onClick={goHome}>
         처음으로
       </button>
     </div>

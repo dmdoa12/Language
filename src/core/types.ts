@@ -83,6 +83,7 @@ export interface Run {
   mainTheme: Theme | null; //    보스 테마
   consumedRelicIds: string[]; // 런 중 1회성 효과를 이미 쓴 유물
   stats: AnswerStats;
+  chatBonusClaimed?: boolean; //  보스 대화 보너스를 받았는가 (Phase 4)
 }
 
 export interface Relic {

@@ -792,3 +792,45 @@ button.primary.danger-bg {
   color: var(--accent);
   font-weight: 600;
 }
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.bubble p {
+  margin: 0;
+}
+
+.bubble.staff {
+  align-self: flex-start;
+  background: var(--surface);
+}
+
+.bubble.learner {
+  align-self: flex-end;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.bubble-note {
+  font-size: 0.85rem;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--accent-text) 40%, transparent);
+}

@@ -271,11 +271,11 @@ export function chatPhraseIds(run: Run, themeOf: (cardId: string) => Theme | und
 
 // 보스 대화 보너스: 대화에서 쓴 오늘의 표현 수만큼 골드. FSRS·체력과 무관. 승리한 런에만.
 export function chatBonusGold(run: Run, usedPhraseCount: number): number {
-  if (run.status !== 'won') return 0;
+  if (run.status !== 'won' || run.chatBonusClaimed) return 0;
   const base = usedPhraseCount * CHAT_GOLD_PER_PHRASE;
   return run.practice ? Math.floor(base / 2) : base;
 }
 
 export function applyChatBonus(run: Run, usedPhraseCount: number): Run {
-  return { ...run, gold: run.gold + chatBonusGold(run, usedPhraseCount) };
+  return { ...run, gold: run.gold + chatBonusGold(run, usedPhraseCount), chatBonusClaimed: true };
 }
