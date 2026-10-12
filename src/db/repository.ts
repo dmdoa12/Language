@@ -1,8 +1,10 @@
+import type { ReviewLog } from 'ts-fsrs';
 import { applyReview, introduceCard } from '../core/fsrs';
 import {
   DEFAULT_PROFILE,
   type Profile,
   type ReviewLogEntry,
+  type Run,
   type StudyCard,
   type StudyRating,
 } from '../core/types';
@@ -48,14 +50,10 @@ export interface ReviewInput {
   now: Date;
 }
 
-// 카드 FSRS 상태와 복습 로그를 한 트랜잭션으로 저장한다.
-export async function recordReview(
-  args: ReviewInput,
-): Promise<{ card: StudyCard; entry: ReviewLogEntry }> {
-  const { card, log } = applyReview(args.card, args.rating, args.now);
-  const entry: ReviewLogEntry = {
+function buildLogEntry(cardId: string, args: ReviewInput, log: ReviewLog): ReviewLogEntry {
+  return {
     id: crypto.randomUUID(),
-    cardId: card.id,
+    cardId,
     runId: args.runId,
     rating: args.rating,
     input: args.input,
@@ -64,9 +62,41 @@ export async function recordReview(
     answeredAt: args.now.getTime(),
     fsrsLog: log,
   };
+}
+
+// 카드 FSRS 상태와 복습 로그를 한 트랜잭션으로 저장한다.
+export async function recordReview(
+  args: ReviewInput,
+): Promise<{ card: StudyCard; entry: ReviewLogEntry }> {
+  const { card, log } = applyReview(args.card, args.rating, args.now);
+  const entry = buildLogEntry(card.id, args, log);
   await db.transaction('rw', db.cards, db.reviewLogs, async () => {
     await db.cards.put(card);
     await db.reviewLogs.add(entry);
   });
   return { card, entry };
+}
+
+export async function loadRuns(): Promise<Run[]> {
+  return db.runs.toArray();
+}
+
+export async function saveRun(run: Run): Promise<void> {
+  await db.runs.put(run);
+}
+
+// 연습 출제(엘리트 리치 등)나 due 가 아닌 카드: FSRS 를 건드리지 않는다.
+export async function saveRunAndReview(run: Run, review: ReviewInput | null): Promise<StudyCard | null> {
+  if (!review) {
+    await saveRun(run);
+    return null;
+  }
+  const { card, log } = applyReview(review.card, review.rating, review.now);
+  const entry = buildLogEntry(card.id, review, log);
+  await db.transaction('rw', db.cards, db.reviewLogs, db.runs, async () => {
+    await db.cards.put(card);
+    await db.reviewLogs.add(entry);
+    await db.runs.put(run);
+  });
+  return card;
 }
