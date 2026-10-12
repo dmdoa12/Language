@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { gradeAnswer, isExactAnswer, type AnswerGrade } from '../core/answer';
 import { isDue, selectNewCards } from '../core/fsrs';
 import { generateMap } from '../core/mapgen';
+import { characterLevel } from '../core/meta';
 import {
   abandonRun,
   answerCard,
@@ -56,6 +57,7 @@ interface GameState {
   reward: RewardState | null;
   nodePerfect: boolean;
   busy: boolean;
+  startLevel: number | null; // 결과 화면의 레벨 변화 표시용
 
   goHome: () => void;
   openReview: () => void;
@@ -141,12 +143,16 @@ export const useGameStore = create<GameState>((set, get) => {
     reward: null,
     nodePerfect: true,
     busy: false,
+    startLevel: null,
 
-    goHome: () => set({ screen: 'home', battle: null, reward: null }),
+    goHome: () => {
+      set({ screen: 'home', battle: null, reward: null });
+      void useCardsStore.getState().refreshMeta();
+    },
     openReview: () => set({ screen: 'review' }),
 
     startRun: async () => {
-      const { cards, runs } = useCardsStore.getState();
+      const { cards, runs, profile } = useCardsStore.getState();
       const now = new Date();
       const plan = planRun(cards, runs, now);
       const map = generateMap({ due: plan.due, leeches: plan.leeches, seed: plan.seed });
@@ -157,16 +163,17 @@ export const useGameStore = create<GameState>((set, get) => {
         nodes: map.nodes,
         mainTheme: map.mainTheme,
         practice: plan.practice,
+        relicIds: profile.ownedRelicIds,
         startedAt: now.getTime(),
       });
       await persistRun(run);
-      set({ screen: 'map', battle: null, reward: null });
+      set({ screen: 'map', battle: null, reward: null, startLevel: characterLevel(cards) });
     },
 
     resumeRun: () => {
       const run = activeRun(useCardsStore.getState().runs);
       if (!run) return;
-      set({ run, battle: null, reward: null });
+      set({ run, battle: null, reward: null, startLevel: null });
       const node = currentNode(run);
       if (node && !node.cleared) {
         if (node.type === 'shop') set({ screen: 'shop' });

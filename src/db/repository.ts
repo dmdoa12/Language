@@ -1,7 +1,9 @@
 import type { ReviewLog } from 'ts-fsrs';
 import { applyReview, introduceCard } from '../core/fsrs';
+import { serializeBackup, type BackupData } from '../core/backup';
 import {
   DEFAULT_PROFILE,
+  type MinedPhrase,
   type Profile,
   type ReviewLogEntry,
   type Run,
@@ -99,4 +101,57 @@ export async function saveRunAndReview(run: Run, review: ReviewInput | null): Pr
     await db.runs.put(run);
   });
   return card;
+}
+
+export async function saveProfile(profile: Profile): Promise<void> {
+  await db.profile.put({ id: PROFILE_ID, ...profile });
+}
+
+export async function loadAnsweredTimes(): Promise<number[]> {
+  return (await db.reviewLogs.orderBy('answeredAt').keys()) as number[];
+}
+
+export async function loadMinedPhrases(): Promise<MinedPhrase[]> {
+  return db.minedPhrases.orderBy('createdAt').reverse().toArray();
+}
+
+export async function saveMinedPhrase(phrase: MinedPhrase): Promise<void> {
+  await db.minedPhrases.put(phrase);
+}
+
+export async function deleteMinedPhrase(id: string): Promise<void> {
+  await db.minedPhrases.delete(id);
+}
+
+// 수집함 표현을 카드로: 카드 추가와 표현 연결을 한 트랜잭션으로.
+export async function convertMinedPhrase(phrase: MinedPhrase, card: StudyCard): Promise<MinedPhrase> {
+  const linked = { ...phrase, cardId: card.id, ja: phrase.ja ?? card.ja };
+  await db.transaction('rw', db.cards, db.minedPhrases, async () => {
+    await db.cards.add(card);
+    await db.minedPhrases.put(linked);
+  });
+  return linked;
+}
+
+export async function exportAll(now: number): Promise<string> {
+  const [cards, reviewLogs, runs, minedPhrases, profile] = await Promise.all([
+    db.cards.toArray(),
+    db.reviewLogs.toArray(),
+    db.runs.toArray(),
+    db.minedPhrases.toArray(),
+    loadProfile(),
+  ]);
+  return serializeBackup({ exportedAt: now, cards, reviewLogs, runs, minedPhrases, profile });
+}
+
+// 전부 지우고 백업으로 교체한다. 이후 덱에 새로 생긴 시드 카드는 ensureSeeded 가 채운다.
+export async function importAll(data: BackupData): Promise<void> {
+  await db.transaction('rw', [db.cards, db.reviewLogs, db.runs, db.minedPhrases, db.profile], async () => {
+    await Promise.all([db.cards.clear(), db.reviewLogs.clear(), db.runs.clear(), db.minedPhrases.clear(), db.profile.clear()]);
+    await db.cards.bulkPut(data.cards);
+    await db.reviewLogs.bulkPut(data.reviewLogs);
+    await db.runs.bulkPut(data.runs);
+    await db.minedPhrases.bulkPut(data.minedPhrases);
+    await db.profile.put({ id: PROFILE_ID, ...data.profile });
+  });
 }
