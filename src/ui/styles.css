@@ -746,3 +746,49 @@ button.primary.danger-bg {
   border-color: var(--again);
   color: var(--surface);
 }
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.input-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mic {
+  flex: 0 0 auto;
+  min-width: 64px;
+  border-radius: 12px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mic.on {
+  background: var(--again);
+  border-color: var(--again);
+  color: var(--surface);
+}
+
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--accent);
+}
+
+.feedback p {
+  margin: 0;
+}
+
+.feedback .label {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 600;
+}

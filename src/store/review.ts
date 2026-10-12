@@ -1,5 +1,7 @@
 import { create } from 'zustand';
+import { judgeAnswer, isLlmEnabled } from '../api/llm';
 import { gradeAnswer, isExactAnswer, type AnswerGrade } from '../core/answer';
+import { combineGrade, needsJudge, type JudgeVerdict } from '../core/judge';
 import { pickNextStep } from '../core/session';
 import type { StudyCard } from '../core/types';
 import { recordReview } from '../db/repository';
@@ -24,6 +26,8 @@ interface ReviewState {
   shownAt: number;
   lastInput: string;
   lastGrade: AnswerGrade | null;
+  verdict: JudgeVerdict | null;
+  judging: boolean;
   copied: boolean;
   nextDueAt: number | null;
   stats: SessionStats;
@@ -43,6 +47,8 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   shownAt: 0,
   lastInput: '',
   lastGrade: null,
+  verdict: null,
+  judging: false,
   copied: false,
   nextDueAt: null,
   stats: EMPTY_STATS,
@@ -57,10 +63,18 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   revealHint: () => set({ hintUsed: true }),
 
   submitAnswer: async (input) => {
-    const { current, hintUsed, shownAt, phase, stats } = get();
-    if (!current || phase !== 'question') return;
-    const now = new Date();
-    const grade = gradeAnswer(current, input, hintUsed);
+    const { current, hintUsed, shownAt, phase, stats, judging } = get();
+    if (!current || phase !== 'question' || judging) return;
+    const answeredAt = new Date();
+    const local = gradeAnswer(current, input, hintUsed);
+    let verdict: JudgeVerdict | null = null;
+    if (needsJudge(local) && isLlmEnabled()) {
+      set({ judging: true });
+      verdict = await judgeAnswer(current, input);
+      set({ judging: false });
+    }
+    const grade = combineGrade(local, verdict, hintUsed);
+    const now = answeredAt;
     const { card } = await recordReview({
       card: current,
       rating: grade.rating,
@@ -75,6 +89,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       current: card,
       lastInput: input,
       lastGrade: grade,
+      verdict,
       copied: grade.rating !== 'again',
       phase: 'result',
       stats: { ...stats, reviewed: stats.reviewed + 1, [grade.rating]: stats[grade.rating] + 1 },
@@ -93,7 +108,14 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     const { cards, profile } = useCardsStore.getState();
     const now = new Date();
     const step = pickNextStep(cards, profile, now, { allowNew: false });
-    const base = { hintUsed: false, lastInput: '', lastGrade: null, copied: false, shownAt: now.getTime() };
+    const base = {
+      hintUsed: false,
+      lastInput: '',
+      lastGrade: null,
+      verdict: null,
+      copied: false,
+      shownAt: now.getTime(),
+    };
     if (step.kind === 'done') {
       set({ ...base, phase: 'done', current: null, nextDueAt: step.nextDueAt });
     } else {

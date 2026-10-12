@@ -1,5 +1,7 @@
 import { create } from 'zustand';
+import { isLlmEnabled, judgeAnswer } from '../api/llm';
 import { gradeAnswer, isExactAnswer, type AnswerGrade } from '../core/answer';
+import { combineGrade, needsJudge, type JudgeVerdict } from '../core/judge';
 import { isDue, selectNewCards } from '../core/fsrs';
 import { generateMap } from '../core/mapgen';
 import { characterLevel } from '../core/meta';
@@ -48,6 +50,7 @@ export interface BattleState {
   shownAt: number;
   lastInput: string;
   lastGrade: AnswerGrade | null;
+  verdict: JudgeVerdict | null;
   copied: boolean;
   damage: number;
   negatedBy: string | null;
@@ -98,6 +101,7 @@ function newBattle(mode: BattleState['mode'], cardId: string, phase: BattleState
     shownAt: Date.now(),
     lastInput: '',
     lastGrade: null,
+    verdict: null,
     copied: false,
     damage: 0,
     negatedBy: null,
@@ -225,7 +229,9 @@ export const useGameStore = create<GameState>((set, get) => {
       try {
         const now = new Date();
         const card = getCard(battle.cardId);
-        const grade = gradeAnswer(card, input, battle.hintUsed);
+        const local = gradeAnswer(card, input, battle.hintUsed);
+        const verdict = needsJudge(local) && isLlmEnabled() ? await judgeAnswer(card, input) : null;
+        const grade = combineGrade(local, verdict, battle.hintUsed);
         const review = {
           card,
           rating: grade.rating,
@@ -240,6 +246,7 @@ export const useGameStore = create<GameState>((set, get) => {
           phase: 'result' as const,
           lastInput: input,
           lastGrade: grade,
+          verdict,
           copied: grade.rating !== 'again',
         };
 

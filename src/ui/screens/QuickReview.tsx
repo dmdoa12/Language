@@ -19,7 +19,13 @@ export function QuickReview() {
         </button>
       </header>
       {s.phase === 'question' && s.current ? (
-        <CardQuestion card={s.current} hintUsed={s.hintUsed} onHint={s.revealHint} onSubmit={s.submitAnswer} />
+        <CardQuestion
+          card={s.current}
+          hintUsed={s.hintUsed}
+          onHint={s.revealHint}
+          onSubmit={s.submitAnswer}
+          busy={s.judging}
+        />
       ) : null}
       {s.phase === 'result' && s.current && s.lastGrade ? (
         <CardResult
@@ -29,6 +35,7 @@ export function QuickReview() {
           copied={s.copied}
           onCopy={s.submitCopy}
           onNext={s.next}
+          verdict={s.verdict}
         />
       ) : null}
       {s.phase === 'done' ? (

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { AnswerGrade } from '../../core/answer';
+import type { JudgeVerdict } from '../../core/judge';
 import { buildHint } from '../../core/session';
 import type { StudyCard } from '../../core/types';
 import { THEME_LABELS } from '../labels';
@@ -43,9 +44,10 @@ interface QuestionProps {
   onHint: () => void;
   onSubmit: (input: string) => void | Promise<void>;
   badge?: ReactNode;
+  busy?: boolean;
 }
 
-export function CardQuestion({ card, hintUsed, onHint, onSubmit, badge }: QuestionProps) {
+export function CardQuestion({ card, hintUsed, onHint, onSubmit, badge, busy }: QuestionProps) {
   return (
     <>
       <p className="badge">{badge ?? THEME_LABELS[card.theme]}</p>
@@ -60,7 +62,13 @@ export function CardQuestion({ card, hintUsed, onHint, onSubmit, badge }: Questi
           힌트 보기 (등급이 낮아져요)
         </button>
       )}
-      <JaInput key={`q-${card.id}`} placeholder="일본어로 말해 보세요" submitLabel="확인" onSubmit={onSubmit} />
+      <JaInput
+        key={`q-${card.id}`}
+        placeholder="일본어로 말해 보세요"
+        submitLabel="확인"
+        onSubmit={onSubmit}
+        busy={busy}
+      />
     </>
   );
 }
@@ -73,9 +81,25 @@ interface ResultProps {
   onCopy: (input: string) => boolean;
   onNext: () => void;
   extra?: ReactNode;
+  verdict?: JudgeVerdict | null;
 }
 
-export function CardResult({ card, grade, lastInput, copied, onCopy, onNext, extra }: ResultProps) {
+function Feedback({ verdict }: { verdict: JudgeVerdict }) {
+  if (!verdict.feedback && !verdict.corrected) return null;
+  return (
+    <section className="feedback">
+      <span className="label">AI 첨삭</span>
+      {verdict.feedback ? <p>{verdict.feedback}</p> : null}
+      {verdict.corrected ? (
+        <p lang="ja">
+          자연스럽게: <strong>{verdict.corrected}</strong>
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+export function CardResult({ card, grade, lastInput, copied, onCopy, onNext, extra, verdict }: ResultProps) {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => speak(card.ja), [card.id, card.ja]);
   return (
@@ -85,6 +109,7 @@ export function CardResult({ card, grade, lastInput, copied, onCopy, onNext, ext
       <p className="your-input">
         내 답: <span lang="ja">{lastInput}</span>
       </p>
+      {verdict ? <Feedback verdict={verdict} /> : null}
       <AnswerPanel card={card} />
       {copied ? (
         <button type="button" className="primary" onClick={onNext} autoFocus>

@@ -49,7 +49,14 @@ export function Battle() {
       <p className="battle-title">{title}</p>
       {battle.phase === 'study' ? <CardStudy card={card} onDone={g.finishStudy} /> : null}
       {battle.phase === 'question' ? (
-        <CardQuestion card={card} hintUsed={battle.hintUsed} onHint={g.revealHint} onSubmit={g.submitAnswer} badge={badge} />
+        <CardQuestion
+          card={card}
+          hintUsed={battle.hintUsed}
+          onHint={g.revealHint}
+          onSubmit={g.submitAnswer}
+          badge={badge}
+          busy={g.busy}
+        />
       ) : null}
       {battle.phase === 'result' && battle.lastGrade ? (
         <CardResult
@@ -60,6 +67,7 @@ export function Battle() {
           onCopy={g.submitCopy}
           onNext={() => void g.continueAfterResult()}
           extra={resultExtra}
+          verdict={battle.verdict}
         />
       ) : null}
     </div>
