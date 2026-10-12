@@ -18,3 +18,8 @@ jobs:
       - run: npx tsc
       - run: npm test
       - run: npm run build
+      - name: Worker typecheck
+        working-directory: worker
+        run: |
+          npm ci
+          npx tsc --noEmit
