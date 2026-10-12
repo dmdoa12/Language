@@ -1,18 +1,19 @@
 import {
   allowedOrigin,
-  buildChatSystem,
-  buildChatUserMessage,
-  buildJudgeUserMessage,
-  CHAT_SCHEMA,
+  buildChatCall,
+  buildJudgeCall,
   checkAccess,
-  JUDGE_SCHEMA,
-  JUDGE_SYSTEM,
   parseChatRequest,
   parseChatResponse,
   parseJudgeRequest,
   parseJudgeResponse,
+  resultText,
   usageKey,
+  type ModelCall,
+  type ModelResult,
 } from './logic';
+
+export type { ModelCall, ModelResult };
 
 // Cloudflare KVNamespace 중 쓰는 부분만 (앱 쪽 타입 체크에서도 쓰려고 직접 정의).
 export interface UsageStore {
@@ -51,20 +52,6 @@ async function consumeQuota(env: Env): Promise<{ ok: boolean; remaining: number 
   return { ok: true, remaining: limit - used - 1 };
 }
 
-export type CallKind = 'judge' | 'chat';
-
-export interface ModelCall {
-  kind: CallKind;
-  system: string;
-  user: string;
-  schema: Record<string, unknown>;
-}
-
-export interface ModelResult {
-  stopReason: string | null;
-  text: string | null; // 첫 text 블록
-}
-
 export interface WorkerDeps {
   // Claude 호출 (SDK 는 index.ts 에만 있다)
   callModel: (env: Env, call: ModelCall) => Promise<ModelResult>;
@@ -72,33 +59,14 @@ export interface WorkerDeps {
   isApiError: (error: unknown) => boolean;
 }
 
-async function run(deps: WorkerDeps, env: Env, call: ModelCall): Promise<string> {
-  const result = await deps.callModel(env, call);
-  if (result.stopReason === 'refusal') throw new Error('AI 가 이 요청에 답하지 않았어요.');
-  if (result.text === null) throw new Error('AI 응답이 비어 있어요.');
-  return result.text;
-}
-
 async function judge(deps: WorkerDeps, env: Env, body: unknown) {
   const req = parseJudgeRequest(body);
-  const text = await run(deps, env, {
-    kind: 'judge',
-    system: JUDGE_SYSTEM,
-    user: buildJudgeUserMessage(req),
-    schema: JUDGE_SCHEMA,
-  });
-  return parseJudgeResponse(text);
+  return parseJudgeResponse(resultText(await deps.callModel(env, buildJudgeCall(req))));
 }
 
 async function chat(deps: WorkerDeps, env: Env, body: unknown) {
   const req = parseChatRequest(body);
-  const text = await run(deps, env, {
-    kind: 'chat',
-    system: buildChatSystem(req),
-    user: buildChatUserMessage(req),
-    schema: CHAT_SCHEMA,
-  });
-  return parseChatResponse(text, req);
+  return parseChatResponse(resultText(await deps.callModel(env, buildChatCall(req))), req);
 }
 
 export function createWorker(deps: WorkerDeps) {
