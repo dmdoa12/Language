@@ -141,3 +141,73 @@ describe('숫자와 한자·가나 혼용', () => {
     expect(isExactAnswer(bag, 'レジ袋1枚おねがいします')).toBe(true);
   });
 });
+
+describe('형태소 분석기 읽기 비교', () => {
+  // 가짜 분석기: 알려진 표기를 가타카나 읽기로 바꾼다 (kuromoji 는 가타카나 읽기를 준다)
+  const dict: Array<[string, string]> = [
+    ['下さい', 'クダサイ'],
+    ['ください', 'クダサイ'],
+    ['一枚', 'イチマイ'],
+    ['レジ袋', 'レジブクロ'],
+    ['お願い', 'オネガイ'],
+    ['します', 'シマス'],
+    ['二枚', 'ニマイ'],
+    ['頂けますか', 'イタダケマスカ'],
+    ['いただけますか', 'イタダケマスカ'],
+    ['温めて', 'アタタメテ'],
+    ['暖めて', 'アタタメテ'],
+    ['これ', 'コレ'],
+    ['肉まん', 'ニクマン'],
+    ['を', 'ヲ'],
+    ['、', '、'],
+    ['。', '。'],
+  ];
+  const reader = (text: string) => {
+    let out = '';
+    let rest = text;
+    while (rest.length > 0) {
+      const hit = dict.find(([w]) => rest.startsWith(w));
+      if (hit) {
+        out += hit[1];
+        rest = rest.slice(hit[0].length);
+      } else {
+        out += rest[0];
+        rest = rest.slice(1);
+      }
+    }
+    return out;
+  };
+
+  const warm = { ja: 'これ、温めてもらえますか。', readings: ['これあたためてもらえますか'] };
+  const bag = { ja: 'レジ袋、一枚お願いします。', readings: ['れじぶくろいちまいおねがいします'] };
+
+  it('다른 한자 표기도 읽기가 같으면 정답', () => {
+    // 분석기 없이는 한 글자 다른 근접 오답(hard)
+    expect(gradeAnswer(warm, 'これ暖めてもらえますか', false)).toMatchObject({ result: 'near', rating: 'hard' });
+    expect(gradeAnswer(warm, 'これ暖めてもらえますか', false, reader)).toMatchObject({ result: 'correct', rating: 'good' });
+  });
+
+  it('음성 인식처럼 한자가 섞인 입력, 숫자 입력', () => {
+    expect(gradeAnswer(bag, 'レジ袋1枚お願いします', false, reader).rating).toBe('good');
+  });
+
+  it('읽기가 다르면 여전히 오답', () => {
+    expect(gradeAnswer(bag, 'レジ袋二枚お願いします', false, reader).result).not.toBe('correct');
+  });
+
+  it('분석기가 오류를 내면 기존 판정으로', () => {
+    const broken = () => {
+      throw new Error('not ready');
+    };
+    expect(gradeAnswer(warm, 'これ暖めてもらえますか', false, broken).result).toBe('near');
+    expect(gradeAnswer(warm, 'これ温めてもらえますか', false, broken).rating).toBe('good');
+  });
+});
+
+describe('path shim', () => {
+  it('사전 주소를 만든다', async () => {
+    const { join } = await import('../src/shims/path');
+    expect(join('./dict/', 'base.dat.gz')).toBe('./dict/base.dat.gz');
+    expect(join('/Language/dict', 'cc.dat.gz')).toBe('/Language/dict/cc.dat.gz');
+  });
+});

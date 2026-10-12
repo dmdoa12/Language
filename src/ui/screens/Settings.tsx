@@ -1,10 +1,38 @@
 import { useRef, useState } from 'react';
+import { loadReader, readerStatus } from '../../api/japaneseReader';
 import { checkConnection, DIRECT_DAILY_LIMIT, loadLlmConfig, saveLlmConfig, type LlmConfig } from '../../api/llm';
 import { parseBackup, type BackupData } from '../../core/backup';
 import { seoulDateKey } from '../../core/date';
 import { ensureSeeded, exportAll, importAll } from '../../db/repository';
 import { useCardsStore } from '../../store/cards';
 import { useGameStore } from '../../store/game';
+
+const READER_LABEL = {
+  idle: '아직 받지 않았어요.',
+  loading: '받는 중이에요 (처음 한 번, 약 17MB).',
+  ready: '준비됐어요. 다른 한자 표기나 음성 인식 결과도 같은 발음의 같은 문장이면 정답으로 봐요.',
+  failed: '받지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.',
+} as const;
+
+function ReaderStatusPanel() {
+  const [status, setStatus] = useState(readerStatus());
+  const retry = async () => {
+    setStatus('loading');
+    await loadReader();
+    setStatus(readerStatus());
+  };
+  return (
+    <section className="panel">
+      <h3>일본어 분석 사전 (채점용)</h3>
+      <p className="muted small">{READER_LABEL[status]}</p>
+      {status === 'failed' || status === 'idle' ? (
+        <button type="button" className="secondary" onClick={() => void retry()}>
+          지금 받기
+        </button>
+      ) : null}
+    </section>
+  );
+}
 
 function AiSettings() {
   const initial = loadLlmConfig();
@@ -222,6 +250,8 @@ export function Settings() {
           저장
         </button>
       </section>
+
+      <ReaderStatusPanel />
 
       <AiSettings />
 

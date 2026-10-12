@@ -17,7 +17,7 @@
 ## 기술 스택
 - Vite + React + TypeScript (strict)
 - 상태: Zustand / 저장: Dexie (IndexedDB)
-- 복습: ts-fsrs / 가나 정규화: wanakana / 시드 난수: seedrandom
+- 복습: ts-fsrs / 가나 정규화: wanakana / 읽기 분석(채점용): kuromoji / 시드 난수: seedrandom
 - 테스트: Vitest
 - PWA: vite-plugin-pwa / 배포: GitHub Pages (GitHub Actions)
 - TTS: Web Speech API `speechSynthesis` (lang `ja-JP`)
