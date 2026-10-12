@@ -30,6 +30,15 @@ describe('pickNextStep', () => {
     expect(step.kind === 'review' && step.card.id).toBe('d1');
   });
 
+  it('곧 due 인 학습 단계 카드보다 신규 카드를 먼저 낸다', () => {
+    const failed = applyReview(introduceCard(makeCard('f'), T0), 'again', T0).card;
+    expect(failed.fsrs.due.getTime()).toBeGreaterThan(T0.getTime());
+    const withNew = pickNextStep([failed, makeCard('n1')], profile, T0);
+    expect(withNew.kind === 'new' && withNew.card.id).toBe('n1');
+    const onlyFailed = pickNextStep([failed], profile, T0);
+    expect(onlyFailed.kind === 'review' && onlyFailed.card.id).toBe('f');
+  });
+
   it('due 가 없으면 신규 카드를 낸다', () => {
     const step = pickNextStep([makeCard('n1'), makeCard('n2')], profile, T0);
     expect(step.kind === 'new' && step.card.id).toBe('n1');

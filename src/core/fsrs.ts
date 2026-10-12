@@ -49,17 +49,21 @@ function isLearningState(card: Card): boolean {
   return card.state === State.Learning || card.state === State.Relearning;
 }
 
-export function isDue(card: StudyCard, now: Date): boolean {
+export function isDue(card: StudyCard, now: Date, learnAheadMs = LEARN_AHEAD_MS): boolean {
   if (!isIntroduced(card)) return false;
   const due = card.fsrs.due.getTime();
   if (due <= now.getTime()) return true;
-  return isLearningState(card.fsrs) && due <= now.getTime() + LEARN_AHEAD_MS;
+  return isLearningState(card.fsrs) && due <= now.getTime() + learnAheadMs;
 }
 
 // 오늘 복습할 카드: due 인 도입된 카드를 retrievability 오름차순(잊기 쉬운 것부터).
-export function selectDueCards(cards: readonly StudyCard[], now: Date): StudyCard[] {
+export function selectDueCards(
+  cards: readonly StudyCard[],
+  now: Date,
+  learnAheadMs = LEARN_AHEAD_MS,
+): StudyCard[] {
   return cards
-    .filter((c) => isDue(c, now))
+    .filter((c) => isDue(c, now, learnAheadMs))
     .map((c) => ({ c, r: getRetrievability(c.fsrs, now) }))
     .sort((a, b) => a.r - b.r || a.c.id.localeCompare(b.c.id))
     .map(({ c }) => c);
