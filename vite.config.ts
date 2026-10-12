@@ -41,7 +41,8 @@ export default defineConfig({
     kuromojiDict(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'script',
+      // 등록은 src/pwa.ts 에서 직접 (업데이트 시 안전한 화면에서 새로고침)
+      injectRegister: false,
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: '일본에서의 하루',
