@@ -172,7 +172,7 @@ UI 문구는 한국어. 모바일 우선(폭 375px 기준). 이모지 사용 금
 - **Phase 1 — 학습 코어 (게임 없음)**: Dexie 스키마, seed 카드 50장(konbini 테마), FSRS 래퍼, 정답 판정, 단순 복습 화면, TTS. core 전부 테스트. 학습 로직이 게임보다 먼저다.
 - **Phase 2 — 로그라이크 레이어**: mapgen, run, relics, Map/Battle/Shop/Rest/Reward/RunResult 화면.
 - **Phase 3 — 수집·메타·배포**: Mining, Collection, 메타 진행, PWA, GitHub Pages 배포.
-- **Phase 4 — 음성·LLM**: Web Speech 인식(ja-JP), Cloudflare Workers 경유 LLM 첨삭·의미 판정·보스 대화. API 키는 절대 클라이언트에 두지 않음.
+- **Phase 4 — 음성·LLM**: Web Speech 인식(ja-JP), Claude 첨삭·의미 판정·보스 대화. API 키는 코드·저장소에 절대 넣지 않음. 기본은 사용자가 설정에 넣은 본인 키로 브라우저에서 직접 호출(키는 그 기기에만 저장, 앱 전용 키와 콘솔 사용 한도 권장, 기기당 하루 호출 상한). 키를 기기에 두지 않으려면 Cloudflare Workers 경유 방식도 선택 가능.
 
 ## 작업 규칙
 - 한 번에 한 Phase, 그 안에서도 작은 단위로 커밋. 커밋 메시지는 한국어 한 줄.

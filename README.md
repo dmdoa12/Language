@@ -33,19 +33,30 @@ Settings → Pages → Build and deployment → Source 를 **GitHub Actions** �
 `src/data/seed/*.json` 에 테마별 문장이 있다. `ja`(정답 표기), `readings`(허용 정답, 히라가나·장음 ー),
 `ko`, `situation`(문제로 표시되는 상황)을 고치면 된다. `npm test` 가 형식과 오타(가나 부분 불일치)를 검사한다.
 
-## AI 채점·대화 (선택, Cloudflare Worker)
+## AI 채점·대화 (선택)
 
 AI 기능이 없어도 앱은 그대로 동작한다. 연결하면:
 
-- 정답과 다르게 답했을 때 Claude 가 뜻을 판정한다. 표기만 다르면(음성 인식 결과 등) 정답(good),
+- 정답과 다르게 답했을 때 Claude 가 뜻을 판정한다. 표기만 다르면(다른 한자, 음성 인식 결과 등) 정답(good),
   뜻이 같은 다른 자연스러운 표현이면 hard, 그 외는 기존 판정. 첨삭 코멘트가 함께 나온다.
+  (숫자·한자·가나 혼용은 AI 없이도 정답 처리된다.)
 - 보스를 이기면 메인 테마 상황으로 3~4마디 보너스 대화를 할 수 있다. 오늘 복습한 표현을 쓰면 골드 보너스.
   복습 기록(FSRS)과 체력에는 영향이 없다.
 
-Claude API 키는 Worker 의 비밀 변수에만 두고 앱(브라우저)에는 넣지 않는다.
-앱에는 Worker 주소와 본인만 아는 접속 암호만 저장한다.
+모델: 채점·첨삭 `claude-haiku-5-5`, 보스 대화 `claude-opus-5-5`(거절 시 서버 측 폴백 `fallbacks: "default"`).
 
-### 배포
+### 방법 1: API 키 직접 (기본, 서버 불필요)
+
+1. [Anthropic 콘솔](https://console.anthropic.com)에서 **이 앱 전용 API 키**를 새로 만든다.
+2. 콘솔의 Limits(사용 한도)에서 **월 한도**를 낮게 건다(예: 5달러). 키가 새더라도 피해가 그 금액에서 멈춘다.
+3. 앱 설정 → AI 채점·대화 → "API 키 직접"에 키를 넣고 "연결 확인 후 저장".
+
+키는 그 기기 브라우저 저장소에만 남고 Claude API(api.anthropic.com)로만 보내진다. 코드·저장소·백업 파일에는
+들어가지 않는다. 앱은 기기당 하루 300회까지만 호출한다. 공용 기기에는 넣지 않는다.
+
+### 방법 2: Cloudflare Worker 경유 (키를 기기에 두지 않음)
+
+Claude API 키는 Worker 의 비밀 변수에만 두고, 앱에는 Worker 주소와 본인만 아는 접속 암호만 저장한다.
 
 ```bash
 cd worker
@@ -59,10 +70,9 @@ npx wrangler deploy                         # https://jp-talk-worker.<계정>.wo
 - `wrangler.toml` 의 `ALLOWED_ORIGINS` 는 앱이 배포된 주소(`https://<사용자>.github.io`)다.
 - 하루 호출 상한(`DAILY_LIMIT`, 기본 300)을 쓰려면 KV 를 만들고 `wrangler.toml` 의 주석을 푼다:
   `npx wrangler kv namespace create USAGE`
-- 모델은 `JUDGE_MODEL`(채점·첨삭, 기본 `claude-haiku-5-5`)과 `CHAT_MODEL`(보스 대화, 기본 `claude-opus-5-5`)로 바꿀 수 있다.
-  보스 대화는 거절 시 서버 측 폴백(`fallbacks: "default"`)을 쓴다.
+- 모델은 `JUDGE_MODEL`, `CHAT_MODEL` 로 바꿀 수 있다.
 
-그다음 앱의 설정 → AI 채점·대화에 Worker 주소와 접속 암호를 넣고 "연결 확인 후 저장".
+그다음 앱 설정 → AI 채점·대화 → "Worker 서버"에 주소와 접속 암호를 넣고 "연결 확인 후 저장".
 
 ### 음성 입력
 
