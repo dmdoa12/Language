@@ -1,0 +1,20 @@
+name = "jp-talk-worker"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# 앱이 배포된 출처만 허용 (쉼표로 여러 개). 로컬 개발 시 http://localhost:5173 추가
+ALLOWED_ORIGINS = "https://dmdoa12.github.io"
+DAILY_LIMIT = "300"
+JUDGE_MODEL = "claude-haiku-5-5"
+CHAT_MODEL = "claude-opus-5-5"
+
+# 하루 호출 상한용 KV. `npx wrangler kv namespace create USAGE` 로 만든 id 를 넣고 주석을 푼다.
+# [[kv_namespaces]]
+# binding = "USAGE"
+# id = "<KV namespace id>"
+
+# 비밀 값 (저장소에 넣지 않음):
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put ACCESS_KEY
