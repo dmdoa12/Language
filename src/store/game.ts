@@ -28,7 +28,17 @@ import type { Run } from '../core/types';
 import { introduce, recordReview, saveRun, saveRunAndReview } from '../db/repository';
 import { getCard, useCardsStore } from './cards';
 
-export type Screen = 'home' | 'review' | 'map' | 'battle' | 'shop' | 'reward' | 'result';
+export type Screen =
+  | 'home'
+  | 'review'
+  | 'map'
+  | 'battle'
+  | 'shop'
+  | 'reward'
+  | 'result'
+  | 'mining'
+  | 'collection'
+  | 'settings';
 
 export interface BattleState {
   mode: 'node' | 'learn'; // learn: 상점에서 산 신규 카드 학습 (HP 영향 없음)
@@ -61,6 +71,7 @@ interface GameState {
 
   goHome: () => void;
   openReview: () => void;
+  open: (screen: 'mining' | 'collection' | 'settings') => void;
   startRun: () => Promise<void>;
   resumeRun: () => void;
   abandon: () => Promise<void>;
@@ -150,6 +161,7 @@ export const useGameStore = create<GameState>((set, get) => {
       void useCardsStore.getState().refreshMeta();
     },
     openReview: () => set({ screen: 'review' }),
+    open: (screen) => set({ screen }),
 
     startRun: async () => {
       const { cards, runs, profile } = useCardsStore.getState();

@@ -2,11 +2,14 @@ import { useEffect } from 'react';
 import { useCardsStore } from '../store/cards';
 import { useGameStore } from '../store/game';
 import { Battle } from './screens/Battle';
+import { Collection } from './screens/Collection';
 import { Home } from './screens/Home';
 import { MapScreen } from './screens/MapScreen';
+import { Mining } from './screens/Mining';
 import { QuickReview } from './screens/QuickReview';
 import { Reward } from './screens/Reward';
 import { RunResult } from './screens/RunResult';
+import { Settings } from './screens/Settings';
 import { Shop } from './screens/Shop';
 import './styles.css';
 
@@ -29,6 +32,12 @@ function CurrentScreen() {
       return run && reward ? <Reward /> : <Home />;
     case 'result':
       return run ? <RunResult /> : <Home />;
+    case 'mining':
+      return <Mining />;
+    case 'collection':
+      return <Collection />;
+    case 'settings':
+      return <Settings />;
     case 'home':
       return <Home />;
   }

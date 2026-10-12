@@ -1,4 +1,5 @@
 import { seoulDateKey } from '../../core/date';
+import { characterLevel } from '../../core/meta';
 import { countDueBy } from '../../core/session';
 import { useCardsStore } from '../../store/cards';
 import { useGameStore } from '../../store/game';
@@ -13,9 +14,11 @@ const STATUS_LABEL = {
 export function RunResult() {
   const run = useGameStore((s) => s.run)!;
   const goHome = useGameStore((s) => s.goHome);
+  const startLevel = useGameStore((s) => s.startLevel);
   const cards = useCardsStore((s) => s.cards);
   const tomorrow = seoulDateKey(Date.now() + 24 * 60 * 60 * 1000);
   const answered = run.stats.good + run.stats.hard + run.stats.again;
+  const level = characterLevel(cards);
 
   return (
     <div className="screen result">
@@ -33,6 +36,10 @@ export function RunResult() {
         <div>
           <dt>골드</dt>
           <dd>{run.gold}</dd>
+        </div>
+        <div>
+          <dt>레벨</dt>
+          <dd>{startLevel !== null && startLevel !== level ? `${startLevel}→${level}` : level}</dd>
         </div>
         <div>
           <dt>내일까지 복습</dt>
