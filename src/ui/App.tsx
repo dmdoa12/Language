@@ -1,13 +1,43 @@
 import { useEffect } from 'react';
-import { useReviewStore } from '../store/review';
+import { useCardsStore } from '../store/cards';
+import { useGameStore } from '../store/game';
+import { Battle } from './screens/Battle';
 import { Home } from './screens/Home';
-import { Review } from './screens/Review';
+import { MapScreen } from './screens/MapScreen';
+import { QuickReview } from './screens/QuickReview';
+import { Reward } from './screens/Reward';
+import { RunResult } from './screens/RunResult';
+import { Shop } from './screens/Shop';
 import './styles.css';
 
+function CurrentScreen() {
+  const screen = useGameStore((s) => s.screen);
+  const run = useGameStore((s) => s.run);
+  const battle = useGameStore((s) => s.battle);
+  const reward = useGameStore((s) => s.reward);
+
+  switch (screen) {
+    case 'review':
+      return <QuickReview />;
+    case 'map':
+      return run ? <MapScreen /> : <Home />;
+    case 'battle':
+      return run && battle ? <Battle /> : <Home />;
+    case 'shop':
+      return run ? <Shop /> : <Home />;
+    case 'reward':
+      return run && reward ? <Reward /> : <Home />;
+    case 'result':
+      return run ? <RunResult /> : <Home />;
+    case 'home':
+      return <Home />;
+  }
+}
+
 export function App() {
-  const phase = useReviewStore((s) => s.phase);
-  const error = useReviewStore((s) => s.error);
-  const init = useReviewStore((s) => s.init);
+  const loaded = useCardsStore((s) => s.loaded);
+  const error = useCardsStore((s) => s.error);
+  const init = useCardsStore((s) => s.init);
 
   useEffect(() => {
     void init();
@@ -16,9 +46,8 @@ export function App() {
   return (
     <main className="app">
       {error ? <p className="input-error">저장소를 열 수 없어요: {error}</p> : null}
-      {phase === 'loading' && !error ? <p className="muted">불러오는 중…</p> : null}
-      {phase === 'home' ? <Home /> : null}
-      {phase !== 'loading' && phase !== 'home' ? <Review /> : null}
+      {!loaded && !error ? <p className="muted">불러오는 중…</p> : null}
+      {loaded ? <CurrentScreen /> : null}
     </main>
   );
 }
