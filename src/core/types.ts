@@ -37,7 +37,7 @@ export interface StudyCard {
 export interface ReviewLogEntry {
   id: string;
   cardId: string;
-  runId: string | null;
+  dayId: string | null; // 하루 진행 중이면 DayLog id, 빠른 복습이면 null
   rating: StudyRating;
   input: string;
   hintUsed: boolean;
@@ -46,51 +46,35 @@ export interface ReviewLogEntry {
   fsrsLog: ReviewLog;
 }
 
-export type NodeType = 'battle' | 'elite' | 'shop' | 'rest' | 'event' | 'boss';
-
-export interface MapNode {
-  id: string;
-  floor: number;
-  type: NodeType;
-  cardIds: string[]; //        층 batch (오늘 due). FSRS 에 기록
-  extraCardIds: string[]; //   엘리트 리치 카드 등 연습 출제. FSRS 에 기록하지 않음
-  answeredCardIds: string[]; // 이 노드에서 이미 답한 카드 (재개용)
-  earnedGold: number; //        이 노드 답변으로 쌓인 기본 골드 (배율 적용 전)
-  next: string[];
-  cleared: boolean;
+export interface SceneLine {
+  cardId: string;
+  isNew: boolean; // 오늘 처음 배우는 표현 (먼저 보여주고 따라 말한 뒤 출제)
 }
 
-export interface AnswerStats {
-  good: number;
-  hard: number;
-  again: number;
+export interface Scene {
+  id: string;
+  theme: Theme; //  장소
+  part: number; //  같은 장소가 길면 나눈 순번 (1부터)
+  parts: number;
+  lines: SceneLine[];
 }
 
-export interface Run {
+export interface DayLineResult {
+  cardId: string;
+  rating: StudyRating;
+  firstTry: boolean; // 한 번에 말했는가 (good)
+}
+
+export interface DayLog {
   id: string;
-  seed: string;
-  date: string;
-  nodes: MapNode[];
-  currentNodeId: string | null;
-  hp: number;
-  maxHp: number;
-  gold: number;
-  relicIds: string[];
-  status: 'active' | 'won' | 'dead' | 'abandoned';
+  date: string; // YYYY-MM-DD (Asia/Seoul)
+  scenes: Scene[];
+  results: DayLineResult[]; // 답한 순서대로. 이어하기 위치 = results.length
+  status: 'active' | 'done';
   startedAt: number;
   endedAt: number | null;
-  practice: boolean; //          같은 날 두 번째 이후 런 (보상 절반)
-  mainTheme: Theme | null; //    보스 테마
-  consumedRelicIds: string[]; // 런 중 1회성 효과를 이미 쓴 유물
-  stats: AnswerStats;
-  chatBonusClaimed?: boolean; //  보스 대화 보너스를 받았는가 (Phase 4)
-}
-
-export interface Relic {
-  id: string;
-  name: string;
-  description: string;
-  effect: 'hint_once' | 'negate_wrong_once' | 'shop_extra_choice' | 'max_hp_plus1';
+  stagesAtStart: Record<string, number>; // 하루 시작 때 정원 단계 (오늘 자란 식물 계산용)
+  eveningChatDone?: boolean;
 }
 
 export interface MinedPhrase {
@@ -102,20 +86,24 @@ export interface MinedPhrase {
   cardId: string | null;
 }
 
+export interface ChallengeOptions {
+  noHint: boolean; //    힌트 없이
+  timeLimit: boolean; // 익숙한 문장(stability >= 30)은 15초 안에
+  voiceOnly: boolean; // 말로만 답하기
+}
+
 export interface Profile {
   dailyNewLimit: number;
   unlockedThemes: Theme[];
-  ascension: number;
+  challenge: ChallengeOptions;
   restTokens: number;
   streak: number;
-  ownedRelicIds: string[];
 }
 
 export const DEFAULT_PROFILE: Profile = {
   dailyNewLimit: 15,
   unlockedThemes: ['konbini'],
-  ascension: 0,
+  challenge: { noHint: false, timeLimit: false, voiceOnly: false },
   restTokens: 2,
   streak: 0,
-  ownedRelicIds: [],
 };

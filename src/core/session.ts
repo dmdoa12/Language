@@ -1,8 +1,6 @@
 import { seoulDateKey } from './date';
 import { selectDueCards, selectNewCards } from './fsrs';
-import { isLeech } from './mapgen';
-import { isPracticeRun } from './run';
-import type { Profile, Run, StudyCard } from './types';
+import type { Profile, StudyCard } from './types';
 
 export type NextStep =
   | { kind: 'review'; card: StudyCard }
@@ -57,27 +55,6 @@ export function buildHint(card: Pick<StudyCard, 'readings'>): string {
   const chars = Array.from(card.readings[0] ?? '');
   const n = Math.max(1, Math.ceil(chars.length / 3));
   return chars.slice(0, n).join('') + '…';
-}
-
-export interface RunPlan {
-  date: string;
-  seed: string;
-  practice: boolean;
-  due: StudyCard[];
-  leeches: StudyCard[];
-}
-
-// 런 시작 입력: 오늘 due(미리 출제 포함, retrievability 오름차순), 리치, seed, 연습 여부.
-export function planRun(cards: readonly StudyCard[], runs: readonly Pick<Run, 'date'>[], now: Date): RunPlan {
-  const date = seoulDateKey(now);
-  const runsToday = runs.filter((r) => r.date === date);
-  return {
-    date,
-    seed: `${date}#${runsToday.length + 1}`,
-    practice: isPracticeRun(runsToday, date),
-    due: selectDueCards(cards, now),
-    leeches: cards.filter(isLeech),
-  };
 }
 
 // 해당 날짜(서울) 끝까지 due 가 되는 도입된 카드 수.

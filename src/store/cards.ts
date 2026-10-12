@@ -1,25 +1,25 @@
 import { create } from 'zustand';
 import { seoulDateKey } from '../core/date';
-import { activeDateKeys, computeOwnedRelics, computeStreak, computeUnlockedThemes } from '../core/meta';
-import { DEFAULT_PROFILE, type MinedPhrase, type Profile, type Run, type StudyCard, type Theme } from '../core/types';
+import { activeDateKeys, computeStreak, computeUnlockedThemes } from '../core/meta';
+import { DEFAULT_PROFILE, type DayLog, type MinedPhrase, type Profile, type StudyCard, type Theme } from '../core/types';
 import {
   ensureSeeded,
   loadAnsweredTimes,
   loadCards,
   loadMinedPhrases,
   loadProfile,
-  loadRuns,
+  loadDays,
   saveProfile,
 } from '../db/repository';
 
-export type MetaNotice = { kind: 'theme'; theme: Theme } | { kind: 'relic'; relicId: string };
+export type MetaNotice = { kind: 'theme'; theme: Theme };
 
 interface CardsState {
   loaded: boolean;
   error: string | null;
   cards: StudyCard[];
   profile: Profile;
-  runs: Run[];
+  days: DayLog[];
   minedPhrases: MinedPhrase[];
   notices: MetaNotice[]; // 새로 해금된 테마·유물
   init: () => Promise<void>;
@@ -28,7 +28,7 @@ interface CardsState {
   dismissNotices: () => void;
   replaceCard: (card: StudyCard) => void;
   addCard: (card: StudyCard) => void;
-  upsertRun: (run: Run) => void;
+  upsertDay: (day: DayLog) => void;
   setMinedPhrases: (phrases: MinedPhrase[]) => void;
   setProfile: (profile: Profile) => Promise<void>;
 }
@@ -38,7 +38,7 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   error: null,
   cards: [],
   profile: { ...DEFAULT_PROFILE },
-  runs: [],
+  days: [],
   minedPhrases: [],
   notices: [],
 
@@ -54,31 +54,25 @@ export const useCardsStore = create<CardsState>((set, get) => ({
   },
 
   reload: async () => {
-    const [cards, profile, runs, minedPhrases] = await Promise.all([
+    const [cards, profile, days, minedPhrases] = await Promise.all([
       loadCards(),
       loadProfile(),
-      loadRuns(),
+      loadDays(),
       loadMinedPhrases(),
     ]);
-    set({ cards, profile, runs, minedPhrases });
+    set({ cards, profile, days, minedPhrases });
   },
 
-  // 해금 테마·희귀 유물·연속 기록을 기록에서 다시 계산해 저장한다.
+  // 해금 장소·연속 기록을 기록에서 다시 계산해 저장한다.
   refreshMeta: async () => {
     const { cards, profile } = get();
     const unlockedThemes = computeUnlockedThemes(cards, profile.unlockedThemes);
-    const ownedRelicIds = computeOwnedRelics(cards, profile.ownedRelicIds);
     const { streak, restTokens } = computeStreak(activeDateKeys(await loadAnsweredTimes()), seoulDateKey(new Date()));
-    const next: Profile = { ...profile, unlockedThemes, ownedRelicIds, streak, restTokens };
+    const next: Profile = { ...profile, unlockedThemes, streak, restTokens };
 
-    const notices: MetaNotice[] = [
-      ...unlockedThemes
-        .filter((t) => !profile.unlockedThemes.includes(t))
-        .map((theme): MetaNotice => ({ kind: 'theme', theme })),
-      ...ownedRelicIds
-        .filter((id) => !profile.ownedRelicIds.includes(id))
-        .map((relicId): MetaNotice => ({ kind: 'relic', relicId })),
-    ];
+    const notices: MetaNotice[] = unlockedThemes
+      .filter((t) => !profile.unlockedThemes.includes(t))
+      .map((theme): MetaNotice => ({ kind: 'theme', theme }));
     if (JSON.stringify(next) !== JSON.stringify(profile)) await saveProfile(next);
     set({ profile: next, notices: [...get().notices, ...notices] });
   },
@@ -89,16 +83,17 @@ export const useCardsStore = create<CardsState>((set, get) => ({
 
   addCard: (card) => set({ cards: [...get().cards, card] }),
 
-  upsertRun: (run) => {
-    const runs = get().runs;
-    set({ runs: runs.some((r) => r.id === run.id) ? runs.map((r) => (r.id === run.id ? run : r)) : [...runs, run] });
+  upsertDay: (day) => {
+    const days = get().days;
+    set({ days: days.some((d) => d.id === day.id) ? days.map((d) => (d.id === day.id ? day : d)) : [...days, day] });
   },
 
   setMinedPhrases: (minedPhrases) => set({ minedPhrases }),
 
+  // 화면이 바로 바뀌도록 상태를 먼저 바꾸고 저장한다
   setProfile: async (profile) => {
-    await saveProfile(profile);
     set({ profile });
+    await saveProfile(profile);
   },
 }));
 

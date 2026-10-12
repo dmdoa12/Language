@@ -82,7 +82,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       input,
       hintUsed,
       elapsedMs: now.getTime() - shownAt,
-      runId: null,
+      dayId: null,
       now,
     });
     useCardsStore.getState().replaceCard(card);

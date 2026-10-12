@@ -44,9 +44,9 @@ export default defineConfig({
       injectRegister: 'script',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
-        name: '일본어 회화 로그라이크',
-        short_name: '회화 로그라이크',
-        description: '한국어 상황을 보고 일본어로 말하는 회화 복습 게임',
+        name: '일본에서의 하루',
+        short_name: '일본에서의 하루',
+        description: '한국어 상황을 보고 일본어로 말하는 회화 복습',
         lang: 'ko',
         start_url: './',
         scope: './',

@@ -1,14 +1,15 @@
 import type { Card, ReviewLog } from 'ts-fsrs';
-import type { MinedPhrase, Profile, ReviewLogEntry, Run, StudyCard } from './types';
+import { DEFAULT_PROFILE, type DayLog, type MinedPhrase, type Profile, type ReviewLogEntry, type StudyCard } from './types';
 
-export const BACKUP_VERSION = 1;
+// 2: 일본에서의 하루 (runs → days). 1(로그라이크) 백업은 학습 방식이 달라 가져오지 않는다.
+export const BACKUP_VERSION = 2;
 
 export interface BackupData {
   version: number;
   exportedAt: number;
   cards: StudyCard[];
   reviewLogs: ReviewLogEntry[];
-  runs: Run[];
+  days: DayLog[];
   minedPhrases: MinedPhrase[];
   profile: Profile;
 }
@@ -51,6 +52,7 @@ export function parseBackup(text: string): BackupData {
   }
   if (typeof raw !== 'object' || raw === null) throw new Error('백업 형식이 아니에요.');
   const obj = raw as Record<string, unknown>;
+  if (obj.version === 1) throw new Error('이전 버전(로그라이크) 백업은 가져올 수 없어요.');
   if (obj.version !== BACKUP_VERSION) throw new Error(`지원하지 않는 백업 버전이에요: ${String(obj.version)}`);
   if (typeof obj.profile !== 'object' || obj.profile === null) throw new Error('백업 파일에 profile 이 없어요.');
 
@@ -70,8 +72,8 @@ export function parseBackup(text: string): BackupData {
     exportedAt: typeof obj.exportedAt === 'number' ? obj.exportedAt : 0,
     cards,
     reviewLogs,
-    runs: requireArray(obj, 'runs') as Run[],
+    days: requireArray(obj, 'days') as DayLog[],
     minedPhrases: requireArray(obj, 'minedPhrases') as MinedPhrase[],
-    profile: obj.profile as Profile,
+    profile: { ...DEFAULT_PROFILE, ...(obj.profile as Partial<Profile>) },
   };
 }

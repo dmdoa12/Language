@@ -5,7 +5,7 @@ import { buildMinedCard, createMinedPhrase, validateMinedInput, type MinedCardIn
 import type { MinedPhrase } from '../../core/types';
 import { convertMinedPhrase, deleteMinedPhrase, saveMinedPhrase } from '../../db/repository';
 import { useCardsStore } from '../../store/cards';
-import { useGameStore } from '../../store/game';
+import { useDayStore } from '../../store/day';
 import { THEME_LABELS } from '../labels';
 
 function AddForm() {
@@ -162,7 +162,7 @@ function PhraseItem({ phrase }: { phrase: MinedPhrase }) {
 
 export function Mining() {
   const phrases = useCardsStore((s) => s.minedPhrases);
-  const goHome = useGameStore((s) => s.goHome);
+  const goHome = useDayStore((s) => s.goHome);
   return (
     <div className="screen mining">
       <header className="progress">

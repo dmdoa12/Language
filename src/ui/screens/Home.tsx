@@ -1,97 +1,107 @@
 import { seoulDateKey } from '../../core/date';
+import { totalLines } from '../../core/day';
+import { planDay } from '../../core/dayplan';
 import { selectDueCards, selectNewCards } from '../../core/fsrs';
 import { characterLevel } from '../../core/meta';
-import { getRelic } from '../../core/relics';
+import { THEME_ORDER } from '../../core/types';
 import { useCardsStore } from '../../store/cards';
-import { activeRun, useGameStore } from '../../store/game';
+import { useDayStore } from '../../store/day';
 import { useReviewStore } from '../../store/review';
 import { THEME_LABELS } from '../labels';
 
 export function Home() {
   const cards = useCardsStore((s) => s.cards);
   const profile = useCardsStore((s) => s.profile);
-  const runs = useCardsStore((s) => s.runs);
-  const startRun = useGameStore((s) => s.startRun);
-  const resumeRun = useGameStore((s) => s.resumeRun);
-  const openReview = useGameStore((s) => s.openReview);
-  const startReview = useReviewStore((s) => s.start);
-  const open = useGameStore((s) => s.open);
+  const days = useCardsStore((s) => s.days);
   const notices = useCardsStore((s) => s.notices);
   const dismissNotices = useCardsStore((s) => s.dismissNotices);
+  const startOrResume = useDayStore((s) => s.startOrResumeDay);
+  const open = useDayStore((s) => s.open);
+  const startReview = useReviewStore((s) => s.start);
 
   const now = new Date();
-  const today = seoulDateKey(now);
-  const dueCount = selectDueCards(cards, now).length;
-  const newAvailable = selectNewCards(cards, profile.unlockedThemes, profile.dailyNewLimit, now).length;
-  const learned = cards.filter((c) => c.introducedAt !== null).length;
-  const running = activeRun(runs);
-  const practiceNext = runs.some((r) => r.date === today);
+  const today = days.find((d) => d.date === seoulDateKey(now)) ?? null;
+  const due = selectDueCards(cards, now);
+  const fresh = selectNewCards(cards, profile.unlockedThemes, profile.dailyNewLimit, now);
+  const preview = planDay({ due, fresh });
+  const places = [...new Set(preview.map((s) => s.theme))].sort((a, b) => THEME_ORDER.indexOf(a) - THEME_ORDER.indexOf(b));
+  const dueNow = selectDueCards(cards, now, 0).length;
 
   return (
     <div className="screen home">
-      <h1>일본어 회화 로그라이크</h1>
+      <h1>일본에서의 하루</h1>
       <p className="home-meta">
         레벨 <strong>{characterLevel(cards)}</strong> · 연속 <strong>{profile.streak}</strong>일 · 휴식권{' '}
         {profile.restTokens}
       </p>
+
       {notices.length > 0 ? (
         <section className="notice" role="status">
           {notices.map((n) => (
-            <p key={n.kind === 'theme' ? n.theme : n.relicId}>
-              {n.kind === 'theme'
-                ? `새 테마 해금: ${THEME_LABELS[n.theme]}`
-                : `희귀 유물 획득: ${getRelic(n.relicId)?.name ?? n.relicId} (매 런 시작 때 장착)`}
-            </p>
+            <p key={n.theme}>새 장소에 갈 수 있어요: {THEME_LABELS[n.theme]}</p>
           ))}
           <button type="button" className="link" onClick={dismissNotices}>
             확인
           </button>
         </section>
       ) : null}
-      <dl className="summary">
-        <div>
-          <dt>오늘 복습</dt>
-          <dd>{dueCount}</dd>
-        </div>
-        <div>
-          <dt>새 표현 한도</dt>
-          <dd>{newAvailable}</dd>
-        </div>
-        <div>
-          <dt>배운 표현</dt>
-          <dd>{learned}</dd>
-        </div>
-      </dl>
-      {running ? (
-        <button type="button" className="primary" onClick={resumeRun}>
-          런 이어하기
-        </button>
+
+      {today === null ? (
+        <section className="panel today">
+          <h2>오늘의 하루</h2>
+          {preview.length === 0 ? (
+            <p className="muted">오늘은 복습할 표현도 새 표현도 없어요.</p>
+          ) : (
+            <>
+              <p className="today-route">{places.map((t) => THEME_LABELS[t]).join(' → ')}</p>
+              <p className="muted small tabular">
+                장면 {preview.length}개 · 복습 {due.length} · 새 표현 {fresh.length}
+              </p>
+            </>
+          )}
+          <button type="button" className="primary" onClick={() => void startOrResume()} disabled={preview.length === 0}>
+            하루 시작
+          </button>
+        </section>
+      ) : today.status === 'active' ? (
+        <section className="panel today">
+          <h2>오늘의 하루</h2>
+          <p className="muted small tabular">
+            {today.results.length}/{totalLines(today)}마디 진행
+          </p>
+          <button type="button" className="primary" onClick={() => void startOrResume()}>
+            이어서 하기
+          </button>
+        </section>
       ) : (
-        <button type="button" className="primary" onClick={() => void startRun()}>
-          {practiceNext ? '연습 런 시작 (보상 절반)' : '오늘의 런 시작'}
-        </button>
+        <section className="panel today">
+          <h2>오늘 하루 완료</h2>
+          <p className="muted small">내일 다시 새로운 하루가 열려요.</p>
+          <button type="button" className="secondary" onClick={() => open('summary')}>
+            오늘 요약 보기
+          </button>
+        </section>
       )}
-      <p className="muted small">
-        오늘 복습할 표현은 어느 길로 가도 전부 나와요. 새 표현은 중간 상점에서 골라 배워요.
-      </p>
-      {dueCount > 0 && !running ? (
+
+      {today?.status === 'done' && dueNow > 0 ? (
         <button
           type="button"
-          className="secondary"
+          className="primary"
           onClick={() => {
-            openReview();
+            open('review');
             startReview();
           }}
         >
-          맵 없이 빠른 복습
+          잊기 전에 한 번 더 ({dueNow})
         </button>
       ) : null}
+
       <nav className="home-nav">
+        <button type="button" className="secondary" onClick={() => open('garden')}>
+          정원
+        </button>
         <button type="button" className="secondary" onClick={() => open('mining')}>
           수집함
-        </button>
-        <button type="button" className="secondary" onClick={() => open('collection')}>
-          도감
         </button>
         <button type="button" className="secondary" onClick={() => open('settings')}>
           설정

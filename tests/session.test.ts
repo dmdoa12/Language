@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyReview, createFsrsCard, introduceCard } from '../src/core/fsrs';
-import { buildHint, countDueBy, pickNextStep, planRun, summarizeToday } from '../src/core/session';
+import { buildHint, countDueBy, pickNextStep, summarizeToday } from '../src/core/session';
 import type { StudyCard } from '../src/core/types';
 
 const T0 = new Date('2026-10-12T00:00:00Z');
@@ -87,18 +87,6 @@ describe('pickNextStep allowNew=false', () => {
       kind: 'done',
       nextDueAt: null,
     });
-  });
-});
-
-describe('planRun', () => {
-  it('오늘 첫 런은 정상, 두 번째부터 연습. seed 는 날짜와 회차', () => {
-    const cards = [introduceCard(makeCard('a'), T0), { ...introduceCard(makeCard('l'), T0), fsrs: { ...introduceCard(makeCard('l'), T0).fsrs, lapses: 5 } }];
-    const first = planRun(cards, [], T0);
-    expect(first).toMatchObject({ date: '2026-10-12', seed: '2026-10-12#1', practice: false });
-    expect(first.due.map((c) => c.id).sort()).toEqual(['a', 'l']);
-    expect(first.leeches.map((c) => c.id)).toEqual(['l']);
-    const second = planRun(cards, [{ date: '2026-10-12' }, { date: '2026-10-11' }], T0);
-    expect(second).toMatchObject({ seed: '2026-10-12#2', practice: true });
   });
 });
 

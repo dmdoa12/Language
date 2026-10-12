@@ -1,5 +1,4 @@
 import { seoulDateKey } from './date';
-import { RELICS } from './relics';
 import { THEME_ORDER, type StudyCard, type Theme } from './types';
 
 export const MASTERED_STABILITY = 21; // 레벨·희귀 유물 기준
@@ -7,9 +6,6 @@ export const UNLOCK_STABILITY = 7; //    테마 해금 기준
 export const UNLOCK_RATIO = 0.7;
 export const CARDS_PER_LEVEL = 20;
 export const WEEKLY_REST_TOKENS = 2;
-
-// 희귀 유물 해금 순서: 수집함 카드가 하나씩 숙달될 때마다 앞에서부터.
-export const RARE_RELIC_ORDER: readonly string[] = ['omamori', 'memo', 'catalog', 'bento'];
 
 function isMastered(card: StudyCard): boolean {
   return card.introducedAt !== null && card.fsrs.stability >= MASTERED_STABILITY;
@@ -47,13 +43,6 @@ export function computeUnlockedThemes(cards: readonly StudyCard[], alreadyUnlock
     else break;
   }
   return unlocked;
-}
-
-// 숙달된 수집함 카드 수만큼 희귀 유물을 순서대로 영구 해금.
-export function computeOwnedRelics(cards: readonly StudyCard[], alreadyOwned: readonly string[]): string[] {
-  const earned = cards.filter((c) => c.source === 'mined' && isMastered(c)).length;
-  const owned = new Set([...alreadyOwned, ...RARE_RELIC_ORDER.slice(0, earned)]);
-  return RELICS.map((r) => r.id).filter((id) => owned.has(id));
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

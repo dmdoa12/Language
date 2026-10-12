@@ -65,7 +65,7 @@ describe('backup', () => {
     const entry: ReviewLogEntry = {
       id: 'l1',
       cardId: 'c1',
-      runId: null,
+      dayId: null,
       rating: 'good',
       input: 'はい',
       hintUsed: false,
@@ -77,7 +77,7 @@ describe('backup', () => {
       exportedAt: 5,
       cards: [card],
       reviewLogs: [entry],
-      runs: [],
+      days: [],
       minedPhrases: [],
       profile: DEFAULT_PROFILE,
     });
@@ -92,6 +92,7 @@ describe('backup', () => {
   it('잘못된 파일은 이유를 담아 거부한다', () => {
     expect(() => parseBackup('nope')).toThrow('JSON');
     expect(() => parseBackup('{"version":99}')).toThrow('버전');
-    expect(() => parseBackup('{"version":1,"profile":{}}')).toThrow('cards');
+    expect(() => parseBackup('{"version":1,"profile":{}}')).toThrow('이전 버전');
+    expect(() => parseBackup('{"version":2,"profile":{}}')).toThrow('cards');
   });
 });

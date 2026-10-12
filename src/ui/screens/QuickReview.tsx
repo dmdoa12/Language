@@ -1,10 +1,10 @@
-import { useGameStore } from '../../store/game';
+import { useDayStore } from '../../store/day';
 import { useReviewStore } from '../../store/review';
 import { CardQuestion, CardResult } from '../components/CardViews';
 
 export function QuickReview() {
   const s = useReviewStore();
-  const goHome = useGameStore((g) => g.goHome);
+  const goHome = useDayStore((g) => g.goHome);
   const leave = () => {
     s.stop();
     goHome();
