@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyReview, createFsrsCard, introduceCard } from '../src/core/fsrs';
-import { buildHint, pickNextStep, summarizeToday } from '../src/core/session';
+import { buildHint, countDueBy, pickNextStep, planRun, summarizeToday } from '../src/core/session';
 import type { StudyCard } from '../src/core/types';
 
 const T0 = new Date('2026-10-12T00:00:00Z');
@@ -78,5 +78,35 @@ describe('buildHint', () => {
   it('첫 reading 의 앞 1/3 을 보여준다', () => {
     expect(buildHint({ readings: ['いらっしゃいませ'] })).toBe('いらっ…');
     expect(buildHint({ readings: ['はい'] })).toBe('は…');
+  });
+});
+
+describe('pickNextStep allowNew=false', () => {
+  it('신규 카드를 내지 않는다', () => {
+    expect(pickNextStep([makeCard('n1')], profile, T0, { allowNew: false })).toEqual({
+      kind: 'done',
+      nextDueAt: null,
+    });
+  });
+});
+
+describe('planRun', () => {
+  it('오늘 첫 런은 정상, 두 번째부터 연습. seed 는 날짜와 회차', () => {
+    const cards = [introduceCard(makeCard('a'), T0), { ...introduceCard(makeCard('l'), T0), fsrs: { ...introduceCard(makeCard('l'), T0).fsrs, lapses: 5 } }];
+    const first = planRun(cards, [], T0);
+    expect(first).toMatchObject({ date: '2026-10-12', seed: '2026-10-12#1', practice: false });
+    expect(first.due.map((c) => c.id).sort()).toEqual(['a', 'l']);
+    expect(first.leeches.map((c) => c.id)).toEqual(['l']);
+    const second = planRun(cards, [{ date: '2026-10-12' }, { date: '2026-10-11' }], T0);
+    expect(second).toMatchObject({ seed: '2026-10-12#2', practice: true });
+  });
+});
+
+describe('countDueBy', () => {
+  it('해당 날짜까지 due 인 도입 카드 수', () => {
+    const a = introduceCard(makeCard('a'), T0);
+    const later = applyReview(applyReview(introduceCard(makeCard('b'), T0), 'good', T0).card, 'good', T0).card;
+    expect(countDueBy([a, later, makeCard('n')], '2026-10-12')).toBe(1);
+    expect(countDueBy([a, later], '2099-01-01')).toBe(2);
   });
 });
