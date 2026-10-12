@@ -257,3 +257,25 @@ export function abandonRun(run: Run, now: number): Run {
   if (run.status !== 'active') return run;
   return { ...run, status: 'abandoned', endedAt: now };
 }
+
+export const CHAT_GOLD_PER_PHRASE = 5;
+export const CHAT_MAX_PHRASES = 12;
+
+// 보스 대화에 쓸 표현: 이번 런에서 출제된 메인 테마 카드 (보스 카드 먼저).
+export function chatPhraseIds(run: Run, themeOf: (cardId: string) => Theme | undefined): string[] {
+  const boss = run.nodes.filter((n) => n.type === 'boss').flatMap((n) => n.cardIds);
+  const others = run.nodes.filter((n) => n.type !== 'boss').flatMap((n) => n.cardIds);
+  const ordered = [...new Set([...boss, ...others])];
+  return ordered.filter((id) => themeOf(id) === run.mainTheme).slice(0, CHAT_MAX_PHRASES);
+}
+
+// 보스 대화 보너스: 대화에서 쓴 오늘의 표현 수만큼 골드. FSRS·체력과 무관. 승리한 런에만.
+export function chatBonusGold(run: Run, usedPhraseCount: number): number {
+  if (run.status !== 'won') return 0;
+  const base = usedPhraseCount * CHAT_GOLD_PER_PHRASE;
+  return run.practice ? Math.floor(base / 2) : base;
+}
+
+export function applyChatBonus(run: Run, usedPhraseCount: number): Run {
+  return { ...run, gold: run.gold + chatBonusGold(run, usedPhraseCount) };
+}

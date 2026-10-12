@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   abandonRun,
   answerCard,
+  applyChatBonus,
   applyReward,
   availableNodeIds,
   BASE_MAX_HP,
   buyHeal,
   buyRelic,
+  chatBonusGold,
+  chatPhraseIds,
   clearNode,
   createRun,
   enterNode,
@@ -229,5 +232,20 @@ describe('abandonRun', () => {
     const run = abandonRun(sampleRun(), 5);
     expect(run.status).toBe('abandoned');
     expect(abandonRun(run, 9).endedAt).toBe(5);
+  });
+});
+
+describe('보스 대화', () => {
+  it('메인 테마 카드만, 보스 카드 먼저, 중복 없이', () => {
+    const run = sampleRun();
+    const themes: Record<string, 'konbini' | 'cafe'> = { c1: 'konbini', c2: 'cafe', c3: 'konbini', c4: 'konbini', c5: 'cafe' };
+    expect(chatPhraseIds(run, (id) => themes[id])).toEqual(['c4', 'c1', 'c3']);
+  });
+
+  it('보너스 골드는 승리한 런에만, 연습 모드는 절반', () => {
+    expect(chatBonusGold(sampleRun(), 3)).toBe(0);
+    expect(chatBonusGold(sampleRun({ status: 'won' }), 3)).toBe(15);
+    expect(chatBonusGold(sampleRun({ status: 'won', practice: true }), 3)).toBe(7);
+    expect(applyChatBonus(sampleRun({ status: 'won', gold: 10 }), 2).gold).toBe(20);
   });
 });
