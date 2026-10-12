@@ -9,12 +9,12 @@
   --good: #2e7d4f;
   --hard: #a26a00;
   --again: #b3261e;
-  color-scheme: light dark;
+  color-scheme: light;
   font-family: system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Noto Sans KR', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #17181a;
     --surface: #222326;
     --text: #ececec;
@@ -25,7 +25,22 @@
     --good: #6cc48f;
     --hard: #e0b050;
     --again: #f08a82;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #17181a;
+  --surface: #222326;
+  --text: #ececec;
+  --muted: #a0a0a6;
+  --border: #38393d;
+  --accent: #7fb0e0;
+  --accent-text: #0f1a26;
+  --good: #6cc48f;
+  --hard: #e0b050;
+  --again: #f08a82;
+  color-scheme: dark;
 }
 
 * {
