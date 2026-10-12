@@ -55,6 +55,7 @@ export interface MapNode {
   cardIds: string[]; //        층 batch (오늘 due). FSRS 에 기록
   extraCardIds: string[]; //   엘리트 리치 카드 등 연습 출제. FSRS 에 기록하지 않음
   answeredCardIds: string[]; // 이 노드에서 이미 답한 카드 (재개용)
+  earnedGold: number; //        이 노드 답변으로 쌓인 기본 골드 (배율 적용 전)
   next: string[];
   cleared: boolean;
 }

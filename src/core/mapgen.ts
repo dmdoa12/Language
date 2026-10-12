@@ -66,6 +66,7 @@ function makeNode(floor: number, index: number, type: NodeType, cardIds: string[
     cardIds,
     extraCardIds: [],
     answeredCardIds: [],
+    earnedGold: 0,
     next: [],
     cleared: false,
   };
