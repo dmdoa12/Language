@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { judgeAnswer, isLlmEnabled } from '../api/llm';
+import { getReader } from '../api/japaneseReader';
 import { gradeAnswer, isExactAnswer, type AnswerGrade } from '../core/answer';
 import { combineGrade, needsJudge, type JudgeVerdict } from '../core/judge';
 import { pickNextStep } from '../core/session';
@@ -66,7 +67,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     const { current, hintUsed, shownAt, phase, stats, judging } = get();
     if (!current || phase !== 'question' || judging) return;
     const answeredAt = new Date();
-    const local = gradeAnswer(current, input, hintUsed);
+    const local = gradeAnswer(current, input, hintUsed, getReader() ?? undefined);
     let verdict: JudgeVerdict | null = null;
     if (needsJudge(local) && isLlmEnabled()) {
       set({ judging: true });
@@ -99,7 +100,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   // 오답 후 따라 입력. 등급은 바뀌지 않는다.
   submitCopy: (input) => {
     const { current } = get();
-    if (!current || !isExactAnswer(current, input)) return false;
+    if (!current || !isExactAnswer(current, input, getReader() ?? undefined)) return false;
     set({ copied: true });
     return true;
   },

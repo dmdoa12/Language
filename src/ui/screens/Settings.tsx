@@ -1,30 +1,75 @@
 import { useRef, useState } from 'react';
-import { checkConnection, loadLlmConfig, saveLlmConfig } from '../../api/llm';
+import { loadReader, readerStatus } from '../../api/japaneseReader';
+import { checkConnection, DIRECT_DAILY_LIMIT, loadLlmConfig, saveLlmConfig, type LlmConfig } from '../../api/llm';
 import { parseBackup, type BackupData } from '../../core/backup';
 import { seoulDateKey } from '../../core/date';
 import { ensureSeeded, exportAll, importAll } from '../../db/repository';
 import { useCardsStore } from '../../store/cards';
 import { useGameStore } from '../../store/game';
 
+const READER_LABEL = {
+  idle: '아직 받지 않았어요.',
+  loading: '받는 중이에요 (처음 한 번, 약 17MB).',
+  ready: '준비됐어요. 다른 한자 표기나 음성 인식 결과도 같은 발음의 같은 문장이면 정답으로 봐요.',
+  failed: '받지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.',
+} as const;
+
+function ReaderStatusPanel() {
+  const [status, setStatus] = useState(readerStatus());
+  const retry = async () => {
+    setStatus('loading');
+    await loadReader();
+    setStatus(readerStatus());
+  };
+  return (
+    <section className="panel">
+      <h3>일본어 분석 사전 (채점용)</h3>
+      <p className="muted small">{READER_LABEL[status]}</p>
+      {status === 'failed' || status === 'idle' ? (
+        <button type="button" className="secondary" onClick={() => void retry()}>
+          지금 받기
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 function AiSettings() {
   const initial = loadLlmConfig();
-  const [endpoint, setEndpoint] = useState(initial?.endpoint ?? '');
-  const [accessKey, setAccessKey] = useState(initial?.accessKey ?? '');
+  const [mode, setMode] = useState<LlmConfig['mode']>(initial?.mode ?? 'direct');
+  const [apiKey, setApiKey] = useState(initial?.mode === 'direct' ? initial.apiKey : '');
+  const [endpoint, setEndpoint] = useState(initial?.mode === 'worker' ? initial.endpoint : '');
+  const [accessKey, setAccessKey] = useState(initial?.mode === 'worker' ? initial.accessKey : '');
+  const [connected, setConnected] = useState(initial !== null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(
     initial ? { ok: true, text: '연결 정보가 저장돼 있어요.' } : null,
   );
   const [checking, setChecking] = useState(false);
 
-  const save = async () => {
-    const config = { endpoint: endpoint.trim(), accessKey: accessKey.trim() };
+  const build = (): LlmConfig | string => {
+    if (mode === 'direct') {
+      const key = apiKey.trim();
+      if (!key.startsWith('sk-')) return 'sk- 로 시작하는 Claude API 키를 입력해 주세요.';
+      return { mode: 'direct', apiKey: key };
+    }
+    const config = { mode: 'worker' as const, endpoint: endpoint.trim(), accessKey: accessKey.trim() };
     if (!/^https?:\/\//.test(config.endpoint) || config.accessKey === '') {
-      setStatus({ ok: false, text: 'https:// 로 시작하는 Worker 주소와 접속 암호를 모두 입력해 주세요.' });
+      return 'https:// 로 시작하는 Worker 주소와 접속 암호를 모두 입력해 주세요.';
+    }
+    return config;
+  };
+
+  const save = async () => {
+    const config = build();
+    if (typeof config === 'string') {
+      setStatus({ ok: false, text: config });
       return;
     }
     setChecking(true);
     try {
       await checkConnection(config);
       saveLlmConfig(config);
+      setConnected(true);
       setStatus({ ok: true, text: '연결됐어요. 이제 AI 채점·첨삭과 보스 대화를 쓸 수 있어요.' });
     } catch (e) {
       setStatus({ ok: false, text: e instanceof Error ? e.message : String(e) });
@@ -35,7 +80,9 @@ function AiSettings() {
 
   const disconnect = () => {
     saveLlmConfig(null);
+    setApiKey('');
     setAccessKey('');
+    setConnected(false);
     setStatus({ ok: false, text: '연결을 해제했어요. 채점은 기존 방식으로만 해요.' });
   };
 
@@ -43,32 +90,75 @@ function AiSettings() {
     <section className="panel form">
       <h3>AI 채점·대화</h3>
       <p className="muted small">
-        Cloudflare Worker 주소와 접속 암호를 넣으면 표준 문장과 다르게 말해도 뜻이 맞는지 AI 가 판정하고 첨삭해 줘요. 이 기기에만
-        저장돼요.
+        연결하면 표준 문장과 다르게 말해도 뜻이 맞는지 Claude 가 판정하고 첨삭해 줘요. 보스를 이기면 보너스 대화도 할 수
+        있어요.
       </p>
-      <label htmlFor="llm-endpoint">Worker 주소</label>
-      <input
-        id="llm-endpoint"
-        type="url"
-        inputMode="url"
-        placeholder="https://jp-talk-worker.<계정>.workers.dev"
-        value={endpoint}
-        onChange={(e) => setEndpoint(e.target.value)}
-      />
-      <label htmlFor="llm-key">접속 암호</label>
-      <input
-        id="llm-key"
-        type="password"
-        autoComplete="off"
-        value={accessKey}
-        onChange={(e) => setAccessKey(e.target.value)}
-      />
+      <div className="tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'direct'}
+          className={`tab ${mode === 'direct' ? 'active' : ''}`}
+          onClick={() => setMode('direct')}
+        >
+          API 키 직접
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'worker'}
+          className={`tab ${mode === 'worker' ? 'active' : ''}`}
+          onClick={() => setMode('worker')}
+        >
+          Worker 서버
+        </button>
+      </div>
+
+      {mode === 'direct' ? (
+        <>
+          <label htmlFor="llm-api-key">Claude API 키</label>
+          <input
+            id="llm-api-key"
+            type="password"
+            autoComplete="off"
+            placeholder="sk-ant-..."
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          <p className="muted small">
+            키는 이 기기 브라우저에만 저장되고 Claude API 로만 보내져요. 이 앱 전용 키를 새로 만들고, Anthropic 콘솔에서 월 사용
+            한도(예: 5달러)를 걸어 두세요. 이 기기에서 하루 {DIRECT_DAILY_LIMIT}회까지만 호출해요. 공용 기기에는 넣지 마세요.
+          </p>
+        </>
+      ) : (
+        <>
+          <label htmlFor="llm-endpoint">Worker 주소</label>
+          <input
+            id="llm-endpoint"
+            type="url"
+            inputMode="url"
+            placeholder="https://jp-talk-worker.<계정>.workers.dev"
+            value={endpoint}
+            onChange={(e) => setEndpoint(e.target.value)}
+          />
+          <label htmlFor="llm-key">접속 암호</label>
+          <input
+            id="llm-key"
+            type="password"
+            autoComplete="off"
+            value={accessKey}
+            onChange={(e) => setAccessKey(e.target.value)}
+          />
+          <p className="muted small">API 키를 기기에 두지 않는 방식이에요. README 의 Worker 배포 절차가 필요해요.</p>
+        </>
+      )}
+
       {status ? <p className={status.ok ? 'note' : 'input-error'}>{status.text}</p> : null}
       <div className="row">
         <button type="button" className="primary" disabled={checking} onClick={() => void save()}>
           {checking ? '확인 중…' : '연결 확인 후 저장'}
         </button>
-        {initial ? (
+        {connected ? (
           <button type="button" className="secondary" onClick={disconnect}>
             연결 해제
           </button>
@@ -160,6 +250,8 @@ export function Settings() {
           저장
         </button>
       </section>
+
+      <ReaderStatusPanel />
 
       <AiSettings />
 

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { loadReader } from '../api/japaneseReader';
 import { useCardsStore } from '../store/cards';
 import { useGameStore } from '../store/game';
 import { Battle } from './screens/Battle';
@@ -55,6 +56,13 @@ export function App() {
   useEffect(() => {
     void init();
   }, [init]);
+
+  // 첫 화면이 뜬 뒤 형태소 분석 사전을 백그라운드에서 받는다 (실패해도 채점은 기존 방식으로 동작)
+  useEffect(() => {
+    if (!loaded) return;
+    const timer = setTimeout(() => void loadReader(), 1500);
+    return () => clearTimeout(timer);
+  }, [loaded]);
 
   return (
     <main className="app">

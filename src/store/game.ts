@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { chatTurn, isLlmEnabled, judgeAnswer, type ChatLine } from '../api/llm';
+import { getReader } from '../api/japaneseReader';
 import { gradeAnswer, isExactAnswer, type AnswerGrade } from '../core/answer';
 import { combineGrade, needsJudge, type JudgeVerdict } from '../core/judge';
 import { isDue, selectNewCards } from '../core/fsrs';
@@ -281,7 +282,7 @@ export const useGameStore = create<GameState>((set, get) => {
       try {
         const now = new Date();
         const card = getCard(battle.cardId);
-        const local = gradeAnswer(card, input, battle.hintUsed);
+        const local = gradeAnswer(card, input, battle.hintUsed, getReader() ?? undefined);
         const verdict = needsJudge(local) && isLlmEnabled() ? await judgeAnswer(card, input) : null;
         const grade = combineGrade(local, verdict, battle.hintUsed);
         const review = {
@@ -328,14 +329,14 @@ export const useGameStore = create<GameState>((set, get) => {
 
     submitCopy: (input) => {
       const battle = get().battle;
-      if (!battle || !isExactAnswer(getCard(battle.cardId), input)) return false;
+      if (!battle || !isExactAnswer(getCard(battle.cardId), input, getReader() ?? undefined)) return false;
       set({ battle: { ...battle, copied: true } });
       return true;
     },
 
     finishStudy: (input) => {
       const battle = get().battle;
-      if (!battle || battle.phase !== 'study' || !isExactAnswer(getCard(battle.cardId), input)) return false;
+      if (!battle || battle.phase !== 'study' || !isExactAnswer(getCard(battle.cardId), input, getReader() ?? undefined)) return false;
       set({ battle: { ...battle, phase: 'question', shownAt: Date.now() } });
       return true;
     },
