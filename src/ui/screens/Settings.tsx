@@ -14,7 +14,11 @@ function ChallengePanel() {
   const setProfile = useCardsStore((s) => s.setProfile);
   const voiceSupported = isSpeechSupported();
   const toggle = (key: keyof ChallengeOptions) =>
-    void setProfile({ ...profile, challenge: { ...profile.challenge, [key]: !profile.challenge[key] } });
+    void setProfile({
+      ...profile,
+      challenge: { ...profile.challenge, [key]: !profile.challenge[key] },
+      settingsUpdatedAt: Date.now(),
+    });
   const options: Array<{ key: keyof ChallengeOptions; label: string; detail: string }> = [
     { key: 'noHint', label: '힌트 없이', detail: '문제에서 힌트 버튼을 숨겨요.' },
     { key: 'timeLimit', label: '익숙한 문장은 15초 안에', detail: '기억이 30일 이상 유지되는 문장은 15초가 지나면 입력한 대로 제출돼요.' },
@@ -225,7 +229,7 @@ export function Settings() {
 
   const saveLimit = async () => {
     if (!limitValid) return;
-    await setProfile({ ...profile, dailyNewLimit: limitValue });
+    await setProfile({ ...profile, dailyNewLimit: limitValue, settingsUpdatedAt: Date.now() });
     setMessage(`하루 새 표현 한도를 ${limitValue}개로 저장했어요.`);
   };
 
