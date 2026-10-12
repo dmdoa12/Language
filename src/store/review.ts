@@ -1,33 +1,24 @@
 import { create } from 'zustand';
 import { gradeAnswer, isExactAnswer, type AnswerGrade } from '../core/answer';
-import { pickNextStep, summarizeToday, type TodaySummary } from '../core/session';
-import { DEFAULT_PROFILE, type Profile, type StudyCard } from '../core/types';
-import { ensureSeeded, introduce, loadCards, loadProfile, recordReview } from '../db/repository';
+import { pickNextStep } from '../core/session';
+import type { StudyCard } from '../core/types';
+import { recordReview } from '../db/repository';
+import { useCardsStore } from './cards';
 
-export type ReviewPhase =
-  | 'loading'
-  | 'home'
-  | 'study' //    신규 카드 소개: 정답을 보고 한 번 따라 입력
-  | 'question' // 한국어 상황 → 일본어 입력
-  | 'result' //   판정 표시 (오답이면 따라 입력해야 진행)
-  | 'done';
+// 빠른 복습: 맵 없이 due 카드만 푼다. 신규 도입은 상점 담당.
+export type ReviewPhase = 'idle' | 'question' | 'result' | 'done';
 
 interface SessionStats {
   reviewed: number;
   good: number;
   hard: number;
   again: number;
-  introduced: number;
 }
 
-const EMPTY_STATS: SessionStats = { reviewed: 0, good: 0, hard: 0, again: 0, introduced: 0 };
+const EMPTY_STATS: SessionStats = { reviewed: 0, good: 0, hard: 0, again: 0 };
 
 interface ReviewState {
   phase: ReviewPhase;
-  error: string | null;
-  cards: StudyCard[];
-  profile: Profile;
-  today: TodaySummary;
   current: StudyCard | null;
   hintUsed: boolean;
   shownAt: number;
@@ -37,26 +28,16 @@ interface ReviewState {
   nextDueAt: number | null;
   stats: SessionStats;
 
-  init: () => Promise<void>;
-  startSession: () => void;
-  goHome: () => void;
+  start: () => void;
+  stop: () => void;
   revealHint: () => void;
   submitAnswer: (input: string) => Promise<void>;
   submitCopy: (input: string) => boolean;
-  finishStudy: (input: string) => Promise<boolean>;
   next: () => void;
 }
 
-function replaceCard(cards: StudyCard[], card: StudyCard): StudyCard[] {
-  return cards.map((c) => (c.id === card.id ? card : c));
-}
-
 export const useReviewStore = create<ReviewState>((set, get) => ({
-  phase: 'loading',
-  error: null,
-  cards: [],
-  profile: { ...DEFAULT_PROFILE },
-  today: { dueCount: 0, newAvailable: 0 },
+  phase: 'idle',
   current: null,
   hintUsed: false,
   shownAt: 0,
@@ -66,26 +47,12 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   nextDueAt: null,
   stats: EMPTY_STATS,
 
-  init: async () => {
-    try {
-      const now = new Date();
-      await ensureSeeded(now);
-      const [cards, profile] = await Promise.all([loadCards(), loadProfile()]);
-      set({ cards, profile, today: summarizeToday(cards, profile, now), phase: 'home', error: null });
-    } catch (e) {
-      set({ error: e instanceof Error ? e.message : String(e) });
-    }
-  },
-
-  startSession: () => {
+  start: () => {
     set({ stats: EMPTY_STATS });
     get().next();
   },
 
-  goHome: () => {
-    const { cards, profile } = get();
-    set({ phase: 'home', current: null, today: summarizeToday(cards, profile, new Date()) });
-  },
+  stop: () => set({ phase: 'idle', current: null }),
 
   revealHint: () => set({ hintUsed: true }),
 
@@ -103,8 +70,8 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       runId: null,
       now,
     });
+    useCardsStore.getState().replaceCard(card);
     set({
-      cards: replaceCard(get().cards, card),
       current: card,
       lastInput: input,
       lastGrade: grade,
@@ -122,33 +89,15 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     return true;
   },
 
-  finishStudy: async (input) => {
-    const { current, phase, stats } = get();
-    if (!current || phase !== 'study' || !isExactAnswer(current, input)) return false;
-    const card = await introduce(current, new Date());
-    set({
-      cards: replaceCard(get().cards, card),
-      stats: { ...stats, introduced: stats.introduced + 1 },
-    });
-    get().next();
-    return true;
-  },
-
   next: () => {
-    const { cards, profile } = get();
+    const { cards, profile } = useCardsStore.getState();
     const now = new Date();
-    const step = pickNextStep(cards, profile, now);
+    const step = pickNextStep(cards, profile, now, { allowNew: false });
     const base = { hintUsed: false, lastInput: '', lastGrade: null, copied: false, shownAt: now.getTime() };
-    switch (step.kind) {
-      case 'review':
-        set({ ...base, phase: 'question', current: step.card });
-        break;
-      case 'new':
-        set({ ...base, phase: 'study', current: step.card });
-        break;
-      case 'done':
-        set({ ...base, phase: 'done', current: null, nextDueAt: step.nextDueAt });
-        break;
+    if (step.kind === 'done') {
+      set({ ...base, phase: 'done', current: null, nextDueAt: step.nextDueAt });
+    } else {
+      set({ ...base, phase: 'question', current: step.card });
     }
   },
 }));
