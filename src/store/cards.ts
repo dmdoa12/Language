@@ -90,9 +90,10 @@ export const useCardsStore = create<CardsState>((set, get) => ({
 
   setMinedPhrases: (minedPhrases) => set({ minedPhrases }),
 
+  // 화면이 바로 바뀌도록 상태를 먼저 바꾸고 저장한다
   setProfile: async (profile) => {
-    await saveProfile(profile);
     set({ profile });
+    await saveProfile(profile);
   },
 }));
 

@@ -28,7 +28,11 @@ export function SceneResult() {
         </p>
       </section>
       <button type="button" className="primary" onClick={next} autoFocus>
-        {upcoming ? `다음 장소: ${THEME_LABELS[upcoming.scene.theme]}` : '하루 마무리'}
+        {upcoming === null
+          ? '하루 마무리'
+          : upcoming.scene.theme === scene.theme
+            ? `계속: ${THEME_LABELS[upcoming.scene.theme]} ${upcoming.scene.part}/${upcoming.scene.parts}`
+            : `다음 장소: ${THEME_LABELS[upcoming.scene.theme]}`}
       </button>
     </div>
   );

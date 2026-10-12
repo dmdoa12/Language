@@ -14,7 +14,7 @@ export function DayScreen() {
   const { scene } = pos;
   const place = THEME_SCENES[scene.theme];
   const card = getCard(line.cardId);
-  const done = line.phase === 'result' ? day.results.length : day.results.length;
+  const done = day.results.length;
   const total = totalLines(day);
   const sceneLabel = `${place.time} · ${THEME_LABELS[scene.theme]}${scene.parts > 1 ? ` ${scene.part}/${scene.parts}` : ''}`;
 
