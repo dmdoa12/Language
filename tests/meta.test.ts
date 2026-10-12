@@ -3,7 +3,6 @@ import { createFsrsCard } from '../src/core/fsrs';
 import {
   activeDateKeys,
   characterLevel,
-  computeOwnedRelics,
   computeStreak,
   computeUnlockedThemes,
   levelProgress,
@@ -71,16 +70,6 @@ describe('테마 해금', () => {
 
   it('이미 해금된 테마는 유지', () => {
     expect(computeUnlockedThemes([], ['konbini', 'cafe'])).toEqual(['konbini', 'cafe']);
-  });
-});
-
-describe('희귀 유물', () => {
-  it('숙달된 수집함 카드 수만큼 순서대로, 이미 가진 것은 유지', () => {
-    expect(computeOwnedRelics(many(1, 21, { source: 'mined' }), [])).toEqual(['omamori']);
-    expect(computeOwnedRelics(many(2, 25, { source: 'mined' }), [])).toEqual(['memo', 'omamori']);
-    expect(computeOwnedRelics(many(5, 25, { source: 'mined' }), []).length).toBe(4);
-    expect(computeOwnedRelics(many(5, 25), [])).toEqual([]);
-    expect(computeOwnedRelics([], ['bento'])).toEqual(['bento']);
   });
 });
 

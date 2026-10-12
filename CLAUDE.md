@@ -17,7 +17,7 @@
 ## 기술 스택
 - Vite + React + TypeScript (strict)
 - 상태: Zustand / 저장: Dexie (IndexedDB)
-- 복습: ts-fsrs / 가나 정규화: wanakana / 읽기 분석(채점용): kuromoji / 시드 난수: seedrandom
+- 복습: ts-fsrs / 가나 정규화: wanakana / 읽기 분석(채점용): kuromoji
 - 테스트: Vitest
 - PWA: vite-plugin-pwa / 배포: GitHub Pages (GitHub Actions)
 - TTS: Web Speech API `speechSynthesis` (lang `ja-JP`)
@@ -55,18 +55,18 @@ interface StudyCard {
   ja: string;                 // 표준 정답 문장 (한자 포함)
   readings: string[];         // 허용 정답 (전부 히라가나). 최소 1개
   ko: string;                 // 한국어 의미
-  situation: string;          // 한국어 상황 설명 (전투 화면 문제로 표시)
+  situation: string;          // 한국어 상황 설명 (장면에서 문제로 표시)
   theme: Theme;
   grammarTags: string[];      // 예: ['〜てしまう']
   source: 'deck' | 'mined';
   fsrs: import('ts-fsrs').Card;
-  introducedAt: number | null; // null = 아직 안 배움 (상점에서 구매 시 설정)
+  introducedAt: number | null; // null = 아직 안 배움 (하루 장면에서 처음 배울 때 설정)
 }
 
 interface ReviewLogEntry {
   id: string;
   cardId: string;
-  runId: string | null;
+  dayId: string | null;       // 하루 진행 중이면 DayLog id, 빠른 복습이면 null
   rating: 'again' | 'hard' | 'good';
   input: string;
   hintUsed: boolean;
@@ -102,6 +102,7 @@ interface DayLog {               // 하루 기록 (runs 대체)
   status: 'active' | 'done';
   startedAt: number;
   endedAt: number | null;
+  stagesAtStart: Record<string, number>; // 하루 시작 때 정원 단계 (오늘 자란 식물 계산용)
   eveningChatDone?: boolean;   // (선택) 하루 마무리 AI 대화
 }
 
