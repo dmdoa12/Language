@@ -52,9 +52,17 @@ export interface MapNode {
   id: string;
   floor: number;
   type: NodeType;
-  cardIds: string[];
+  cardIds: string[]; //        층 batch (오늘 due). FSRS 에 기록
+  extraCardIds: string[]; //   엘리트 리치 카드 등 연습 출제. FSRS 에 기록하지 않음
+  answeredCardIds: string[]; // 이 노드에서 이미 답한 카드 (재개용)
   next: string[];
   cleared: boolean;
+}
+
+export interface AnswerStats {
+  good: number;
+  hard: number;
+  again: number;
 }
 
 export interface Run {
@@ -70,6 +78,10 @@ export interface Run {
   status: 'active' | 'won' | 'dead' | 'abandoned';
   startedAt: number;
   endedAt: number | null;
+  practice: boolean; //          같은 날 두 번째 이후 런 (보상 절반)
+  mainTheme: Theme | null; //    보스 테마
+  consumedRelicIds: string[]; // 런 중 1회성 효과를 이미 쓴 유물
+  stats: AnswerStats;
 }
 
 export interface Relic {
