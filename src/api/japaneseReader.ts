@@ -3,6 +3,7 @@
 // 준비되기 전에는 getReader() 가 null 이라 채점은 기존 방식으로 진행된다.
 import type { IpadicFeatures, Tokenizer } from 'kuromoji';
 import type { Reader } from '../core/answer';
+import type { MorphToken } from '../core/structure';
 
 let tokenizer: Tokenizer<IpadicFeatures> | null = null;
 let loading: Promise<void> | null = null;
@@ -39,6 +40,7 @@ export function loadReader(): Promise<void> {
             }
             tokenizer = built;
             status = 'ready';
+            for (const fn of listeners) fn();
             resolve();
           });
         }),
@@ -49,4 +51,24 @@ export function loadReader(): Promise<void> {
       console.warn('kuromoji 사전을 불러오지 못했어요', e);
     });
   return loading;
+}
+
+// 문장 구조 시각화용 형태소 (사전이 준비되기 전이면 null).
+export function getMorphTokens(text: string): MorphToken[] | null {
+  const t = tokenizer;
+  if (!t) return null;
+  return t.tokenize(text).map((x) => ({
+    surface: x.surface_form,
+    reading: x.reading && x.reading !== '*' ? x.reading : null,
+    pos: x.pos,
+    posDetail: x.pos_detail_1,
+    basic: x.basic_form,
+  }));
+}
+
+// 사전 준비 완료를 기다리는 화면용 구독.
+const listeners = new Set<() => void>();
+export function onReaderReady(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
 }
