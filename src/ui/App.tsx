@@ -1,46 +1,40 @@
 import { useEffect } from 'react';
 import { loadReader } from '../api/japaneseReader';
 import { useCardsStore } from '../store/cards';
-import { useGameStore } from '../store/game';
-import { Battle } from './screens/Battle';
-import { BossChat } from './screens/BossChat';
-import { Collection } from './screens/Collection';
+import { useDayStore } from '../store/day';
+import { DayScreen } from './screens/DayScreen';
+import { DaySummary } from './screens/DaySummary';
+import { EveningChat } from './screens/EveningChat';
+import { Garden } from './screens/Garden';
 import { Home } from './screens/Home';
-import { MapScreen } from './screens/MapScreen';
 import { Mining } from './screens/Mining';
 import { QuickReview } from './screens/QuickReview';
-import { Reward } from './screens/Reward';
-import { RunResult } from './screens/RunResult';
+import { SceneResult } from './screens/SceneResult';
 import { Settings } from './screens/Settings';
-import { Shop } from './screens/Shop';
 import './styles.css';
 
 function CurrentScreen() {
-  const screen = useGameStore((s) => s.screen);
-  const run = useGameStore((s) => s.run);
-  const battle = useGameStore((s) => s.battle);
-  const reward = useGameStore((s) => s.reward);
-  const chat = useGameStore((s) => s.chat);
+  const screen = useDayStore((s) => s.screen);
+  const day = useDayStore((s) => s.day);
+  const line = useDayStore((s) => s.line);
+  const chat = useDayStore((s) => s.chat);
+  const lastSceneIndex = useDayStore((s) => s.lastSceneIndex);
 
   switch (screen) {
+    case 'day':
+      return day && line ? <DayScreen /> : <Home />;
+    case 'sceneResult':
+      return day && lastSceneIndex !== null ? <SceneResult /> : <Home />;
+    case 'summary':
+      return day ? <DaySummary /> : <Home />;
+    case 'chat':
+      return day && chat ? <EveningChat /> : <Home />;
     case 'review':
       return <QuickReview />;
-    case 'map':
-      return run ? <MapScreen /> : <Home />;
-    case 'battle':
-      return run && battle ? <Battle /> : <Home />;
-    case 'shop':
-      return run ? <Shop /> : <Home />;
-    case 'reward':
-      return run && reward ? <Reward /> : <Home />;
-    case 'result':
-      return run ? <RunResult /> : <Home />;
-    case 'chat':
-      return run && chat ? <BossChat /> : <Home />;
+    case 'garden':
+      return <Garden />;
     case 'mining':
       return <Mining />;
-    case 'collection':
-      return <Collection />;
     case 'settings':
       return <Settings />;
     case 'home':

@@ -1,12 +1,11 @@
 import type { StudyCard } from '../../core/types';
 import { isTtsSupported, speak } from '../tts';
+import { SentenceStructure } from './SentenceStructure';
 
-export function AnswerPanel({ card }: { card: StudyCard }) {
+export function AnswerPanel({ card, compareInput }: { card: StudyCard; compareInput?: string | null }) {
   return (
     <section className="answer-panel">
-      <p className="answer-ja" lang="ja">
-        {card.ja}
-      </p>
+      <SentenceStructure text={card.ja} grammarTags={card.grammarTags} compareInput={compareInput} />
       <p className="answer-reading" lang="ja">
         {card.readings[0]}
       </p>

@@ -2,10 +2,52 @@ import { useRef, useState } from 'react';
 import { loadReader, readerStatus } from '../../api/japaneseReader';
 import { checkConnection, DIRECT_DAILY_LIMIT, loadLlmConfig, saveLlmConfig, type LlmConfig } from '../../api/llm';
 import { parseBackup, type BackupData } from '../../core/backup';
+import type { ChallengeOptions } from '../../core/types';
+import { isSpeechSupported } from '../speech';
 import { seoulDateKey } from '../../core/date';
 import { ensureSeeded, exportAll, importAll } from '../../db/repository';
 import { useCardsStore } from '../../store/cards';
-import { useGameStore } from '../../store/game';
+import { useDayStore } from '../../store/day';
+
+function ChallengePanel() {
+  const profile = useCardsStore((s) => s.profile);
+  const setProfile = useCardsStore((s) => s.setProfile);
+  const voiceSupported = isSpeechSupported();
+  const toggle = (key: keyof ChallengeOptions) =>
+    void setProfile({ ...profile, challenge: { ...profile.challenge, [key]: !profile.challenge[key] } });
+  const options: Array<{ key: keyof ChallengeOptions; label: string; detail: string }> = [
+    { key: 'noHint', label: '힌트 없이', detail: '문제에서 힌트 버튼을 숨겨요.' },
+    { key: 'timeLimit', label: '익숙한 문장은 15초 안에', detail: '기억이 30일 이상 유지되는 문장은 15초가 지나면 입력한 대로 제출돼요.' },
+    {
+      key: 'voiceOnly',
+      label: '말로만 답하기',
+      detail: voiceSupported ? '입력창 대신 말하기 버튼으로만 답해요.' : '이 브라우저는 음성 인식을 지원하지 않아 켜도 입력으로 답해요.',
+    },
+  ];
+  return (
+    <section className="panel">
+      <h3>도전 옵션</h3>
+      <ul className="toggle-list">
+        {options.map((o) => (
+          <li key={o.key}>
+            <label className="toggle" htmlFor={`challenge-${o.key}`}>
+              <input
+                id={`challenge-${o.key}`}
+                type="checkbox"
+                checked={profile.challenge[o.key]}
+                onChange={() => toggle(o.key)}
+              />
+              <span>
+                <span className="toggle-label">{o.label}</span>
+                <span className="muted small">{o.detail}</span>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 const READER_LABEL = {
   idle: '아직 받지 않았어요.',
@@ -171,7 +213,7 @@ function AiSettings() {
 export function Settings() {
   const profile = useCardsStore((s) => s.profile);
   const setProfile = useCardsStore((s) => s.setProfile);
-  const goHome = useGameStore((s) => s.goHome);
+  const goHome = useDayStore((s) => s.goHome);
   const [limit, setLimit] = useState(String(profile.dailyNewLimit));
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<BackupData | null>(null);
@@ -216,7 +258,7 @@ export function Settings() {
     const store = useCardsStore.getState();
     await store.reload();
     await store.refreshMeta();
-    useGameStore.setState({ run: null, battle: null, reward: null });
+    useDayStore.setState({ day: null, line: null, chat: null });
     setPending(null);
     if (fileRef.current) fileRef.current.value = '';
     setLimit(String(useCardsStore.getState().profile.dailyNewLimit));
@@ -250,6 +292,8 @@ export function Settings() {
           저장
         </button>
       </section>
+
+      <ChallengePanel />
 
       <ReaderStatusPanel />
 

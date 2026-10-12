@@ -1,23 +1,24 @@
 import { useEffect, useRef } from 'react';
-import { chatBonusGold } from '../../core/run';
+import { eveningChatTheme } from '../../core/day';
 import { getCard } from '../../store/cards';
-import { useGameStore } from '../../store/game';
+import { useDayStore } from '../../store/day';
 import { JaInput } from '../components/JaInput';
-import { THEME_LABELS } from '../labels';
+import { THEME_LABELS, THEME_SCENES } from '../labels';
 import { isTtsSupported, speak } from '../tts';
 
-export function BossChat() {
-  const run = useGameStore((s) => s.run)!;
-  const chat = useGameStore((s) => s.chat)!;
-  const sendChat = useGameStore((s) => s.sendChat);
-  const finishChat = useGameStore((s) => s.finishChat);
+// 하루 마무리 대화 (AI 연결 시). 복습 기록과 무관한 자유 대화.
+export function EveningChat() {
+  const day = useDayStore((s) => s.day)!;
+  const chat = useDayStore((s) => s.chat)!;
+  const sendChat = useDayStore((s) => s.sendChat);
+  const finishChat = useDayStore((s) => s.finishChat);
   const endRef = useRef<HTMLDivElement>(null);
   const spokenRef = useRef(-1);
   const lastIndex = chat.lines.length - 1;
   const last = chat.lines[lastIndex];
+  const theme = eveningChatTheme(day);
 
   useEffect(() => {
-    // 새 직원 대사가 붙었을 때만 한 번 읽어 준다
     if (last?.role === 'staff' && spokenRef.current !== lastIndex) {
       spokenRef.current = lastIndex;
       speak(last.text);
@@ -25,17 +26,15 @@ export function BossChat() {
     endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   }, [last, lastIndex]);
 
-  const bonus = chatBonusGold(run, chat.usedIds.length);
-
   return (
     <div className="screen chat">
       <header className="progress">
-        <span>보너스 대화 · {run.mainTheme ? THEME_LABELS[run.mainTheme] : ''}</span>
+        <span>하루 마무리 대화 · {theme ? `${THEME_LABELS[theme]}의 ${THEME_SCENES[theme].partner}` : ''}</span>
         <span className="hud-stat">
-          쓴 표현 <strong>{chat.usedIds.length}</strong> · +{bonus}골드
+          오늘 표현 <strong>{chat.usedIds.length}</strong>
         </span>
       </header>
-      <p className="muted small">오늘 복습한 표현을 대화에서 써 보세요. 복습 기록과 체력에는 영향이 없어요.</p>
+      <p className="muted small">오늘 말한 표현을 자연스럽게 써 보세요. 복습 기록에는 영향이 없어요.</p>
 
       <ol className="chat-log">
         {chat.lines.map((line, i) => (
@@ -68,7 +67,7 @@ export function BossChat() {
 
       {chat.done ? (
         <button type="button" className="primary" onClick={() => void finishChat()}>
-          대화 끝내고 보너스 받기 (+{bonus}골드)
+          대화 끝내기
         </button>
       ) : (
         <>

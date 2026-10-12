@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { AnswerGrade } from '../../core/answer';
 import type { JudgeVerdict } from '../../core/judge';
 import { buildHint } from '../../core/session';
+import { useCardsStore } from '../../store/cards';
 import type { StudyCard } from '../../core/types';
 import { THEME_LABELS } from '../labels';
 import { speak } from '../tts';
@@ -47,13 +48,21 @@ interface QuestionProps {
   busy?: boolean;
 }
 
+export const TIME_LIMIT_STABILITY = 30;
+export const TIME_LIMIT_SECONDS = 15;
+
 export function CardQuestion({ card, hintUsed, onHint, onSubmit, badge, busy }: QuestionProps) {
+  const challenge = useCardsStore((s) => s.profile.challenge);
+  // 도전 옵션: 익숙한 문장(안정도 30일 이상)은 15초 안에
+  const [deadline] = useState(() =>
+    challenge.timeLimit && card.fsrs.stability >= TIME_LIMIT_STABILITY ? Date.now() + TIME_LIMIT_SECONDS * 1000 : null,
+  );
   return (
     <>
       <p className="badge">{badge ?? THEME_LABELS[card.theme]}</p>
       <p className="situation">{card.situation}</p>
       <p className="prompt-ko">{card.ko}</p>
-      {hintUsed ? (
+      {challenge.noHint ? null : hintUsed ? (
         <p className="hint" lang="ja">
           {buildHint(card)}
         </p>
@@ -68,6 +77,8 @@ export function CardQuestion({ card, hintUsed, onHint, onSubmit, badge, busy }: 
         submitLabel="확인"
         onSubmit={onSubmit}
         busy={busy}
+        voiceOnly={challenge.voiceOnly}
+        deadline={deadline}
       />
     </>
   );
@@ -110,7 +121,7 @@ export function CardResult({ card, grade, lastInput, copied, onCopy, onNext, ext
         내 답: <span lang="ja">{lastInput}</span>
       </p>
       {verdict ? <Feedback verdict={verdict} /> : null}
-      <AnswerPanel card={card} />
+      <AnswerPanel card={card} compareInput={grade.result === 'correct' ? null : lastInput} />
       {copied ? (
         <button type="button" className="primary" onClick={onNext} autoFocus>
           다음
