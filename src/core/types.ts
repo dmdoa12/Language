@@ -98,6 +98,7 @@ export interface Profile {
   challenge: ChallengeOptions;
   restTokens: number;
   streak: number;
+  settingsUpdatedAt: number; // 신규 한도·도전 옵션을 바꾼 시각 (기기 간 동기화 시 최신 설정 선택)
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -106,4 +107,5 @@ export const DEFAULT_PROFILE: Profile = {
   challenge: { noHint: false, timeLimit: false, voiceOnly: false },
   restTokens: 2,
   streak: 0,
+  settingsUpdatedAt: 0,
 };

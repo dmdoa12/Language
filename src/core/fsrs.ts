@@ -99,3 +99,16 @@ export function applyReview(
   const { card: fsrsCard, log } = scheduleReview(card.fsrs, rating, now);
   return { card: { ...card, fsrs: fsrsCard }, log };
 }
+
+// 복습 기록을 시간순으로 다시 적용해 카드의 FSRS 상태를 재구성한다 (기기 간 동기화 병합용).
+// 퍼즈가 꺼져 있어 같은 기록 → 같은 상태.
+export function replayCard(
+  card: StudyCard,
+  logs: readonly { rating: StudyRating; answeredAt: number; id: string }[],
+): StudyCard {
+  if (card.introducedAt === null) return card;
+  const ordered = [...logs].sort((a, b) => a.answeredAt - b.answeredAt || a.id.localeCompare(b.id));
+  let fsrsCard = createFsrsCard(new Date(card.introducedAt));
+  for (const log of ordered) fsrsCard = scheduleReview(fsrsCard, log.rating, new Date(log.answeredAt)).card;
+  return { ...card, fsrs: fsrsCard };
+}

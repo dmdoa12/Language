@@ -41,6 +41,18 @@ Settings → Pages → Build and deployment → Source 를 **GitHub Actions** �
   백그라운드에서 한 번 받고 오프라인 캐시에 남는다. 받기 전에는 위 두 규칙으로만 채점한다(설정에서 상태 확인).
 - 사전 파일은 저장소에 넣지 않고 빌드 때 `node_modules/kuromoji/dict` 에서 `dist/dict/` 로 복사한다.
 
+## 기기 간 동기화 (선택, 무료)
+
+휴대폰과 PC 에서 같은 기록을 쓰려면 GitHub 비공개 Gist 에 기록을 맞춘다.
+
+1. GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token
+2. Scopes 에서 **gist** 만 체크하고 만료 기간을 정해 만든다 (저장소 권한은 주지 않는다)
+3. 앱의 설정 → 기기 간 동기화에 토큰을 넣고 "연결하고 동기화". 다른 기기에도 같은 토큰을 넣는다
+
+앱을 열 때, 하루를 마칠 때, 처음 화면으로 돌아올 때 자동으로 맞춘다. 두 기기에서 따로 공부해도
+복습 기록을 합친 뒤 복습 일정을 다시 계산하므로 양쪽 기록이 모두 남는다. 실시간은 아니어서,
+한 기기에서 공부한 뒤 다른 기기를 열면 그때 받아온다. 토큰은 그 기기에만 저장된다.
+
 ## 데이터
 
 학습 기록은 브라우저 IndexedDB 에만 저장된다. 기기를 바꾸거나 브라우저 데이터를 지우기 전에

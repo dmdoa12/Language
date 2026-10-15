@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { loadReader } from '../api/japaneseReader';
 import { useCardsStore } from '../store/cards';
 import { useDayStore } from '../store/day';
+import { useSyncStore } from '../store/sync';
 import { DayScreen } from './screens/DayScreen';
 import { DaySummary } from './screens/DaySummary';
 import { EveningChat } from './screens/EveningChat';
@@ -50,6 +51,11 @@ export function App() {
   useEffect(() => {
     void init();
   }, [init]);
+
+  // 앱을 열면 다른 기기의 기록을 받아 합친다 (동기화를 켰을 때)
+  useEffect(() => {
+    if (loaded) void useSyncStore.getState().syncNow({ force: true });
+  }, [loaded]);
 
   // 첫 화면이 뜬 뒤 형태소 분석 사전을 백그라운드에서 받는다 (실패해도 채점은 기존 방식으로 동작)
   useEffect(() => {
